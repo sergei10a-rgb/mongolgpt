@@ -5,7 +5,8 @@ import {
   verifyUsageQueueDeploymentDiff,
 } from "./usage-queue-deployment-guard"
 
-const targets = ["UsageQueueSubscriber", "UsageQueueHeartbeat"] as const
+const usageQueueTargets = ["UsageQueueSubscriber", "UsageQueueHeartbeat"] as const
+const paymentServiceTargets = ["PaymentService"] as const
 const operations = new Set([
   "same",
   "create",
@@ -85,31 +86,63 @@ const pulumiOutputSignature = "d0e6a833031e9bbcd3f4e8bde6ca49a4"
 
 // Report only bounded deployment metadata, never state inputs, outputs, or code.
 export function summarizeUsageQueueDeploymentDiff(value: unknown) {
-  if (!Array.isArray(value) || value.length > 2_000) throw new Error("Invalid queue deployment diff")
+  return summarizeDeploymentDiff(value, {
+    invalidMessage: "Invalid queue deployment diff",
+    scopeMessage: "Queue deployment audit requires mongolgpt/dev",
+    targets: usageQueueTargets,
+    targetForName: usageQueueTargetForName,
+    resourceKind: usageQueueResourceKind,
+    rejectionReasonFor,
+  })
+}
+
+export function summarizePaymentServiceDeploymentDiff(value: unknown) {
+  return summarizeDeploymentDiff(value, {
+    invalidMessage: "Invalid payment service deployment diff",
+    scopeMessage: "Payment service deployment audit requires mongolgpt/dev",
+    targets: paymentServiceTargets,
+    targetForName: paymentServiceTargetForName,
+    resourceKind: paymentServiceResourceKind,
+    rejectionReasonFor: () => "not-evaluated",
+  })
+}
+
+function summarizeDeploymentDiff(
+  value: unknown,
+  options: {
+    invalidMessage: string
+    scopeMessage: string
+    targets: readonly string[]
+    targetForName: (name: string) => string
+    resourceKind: (type: string, name: string, inTarget: boolean) => string
+    rejectionReasonFor: (entries: unknown[]) => string | null
+  },
+) {
+  if (!Array.isArray(value) || value.length > 2_000) throw new Error(options.invalidMessage)
   const seen = new Map<string, number>()
   const changes = value.map((raw, index) => {
     const entry = record(raw)
     if (!entry || typeof entry.urn !== "string" || typeof entry.type !== "string" || typeof entry.op !== "string") {
-      throw new Error("Invalid queue deployment diff entry")
+      throw new Error(`${options.invalidMessage} entry`)
     }
     const urn = entry.urn.split("::")
     if (urn.length !== 4 || urn[0] !== "urn:pulumi:dev" || urn[1] !== "mongolgpt") {
-      throw new Error("Queue deployment audit requires mongolgpt/dev")
+      throw new Error(options.scopeMessage)
     }
     if (urn[2].split("$").at(-1) !== entry.type || !operations.has(entry.op)) {
-      throw new Error("Invalid queue deployment diff metadata")
+      throw new Error(`${options.invalidMessage} metadata`)
     }
-    const target = targets.find((name) => urn[3].startsWith(name)) ?? "outside-targets"
+    const target = options.targetForName(urn[3])
     const detail = record(entry.detailedDiff)
     const oldInputs = record(record(entry.old)?.inputs)
     const newInputs = record(record(entry.new)?.inputs)
     const sameResourceAs = seen.get(entry.urn) ?? null
     seen.set(entry.urn, index)
-    const rejectionReason = rejectionReasonFor([entry])
+    const rejectionReason = options.rejectionReasonFor([entry])
     return {
       target,
       operation: entry.op,
-      resource: resourceKind(entry.type, urn[3], target !== "outside-targets"),
+      resource: options.resourceKind(entry.type, urn[3], target !== "outside-targets"),
       sameResourceAs,
       identicalPreviousEvent: sameResourceAs === null ? null : isDeepStrictEqual(value[sameResourceAs], entry),
       identicalPreviousStatesExceptOutputs:
@@ -164,7 +197,13 @@ export function summarizeUsageQueueDeploymentDiff(value: unknown) {
           : [],
     }
   })
-  return { stage: "dev", targets, count: changes.length, previewRejectionReason: rejectionReasonFor(value), changes }
+  return {
+    stage: "dev",
+    targets: options.targets,
+    count: changes.length,
+    previewRejectionReason: options.rejectionReasonFor(value),
+    changes,
+  }
 }
 
 function workerDiffEvidence(
@@ -307,13 +346,27 @@ function opaqueKinds(value: unknown): string[] {
   ]
 }
 
-function resourceKind(type: string, name: string, inTarget: boolean) {
+function usageQueueTargetForName(name: string) {
+  return usageQueueTargets.find((target) => name.startsWith(target)) ?? "outside-targets"
+}
+
+function paymentServiceTargetForName(name: string) {
+  return name.startsWith("PaymentService") ? "PaymentService" : "outside-targets"
+}
+
+function genericResourceKind(type: string, name: string) {
   if (type === "pulumi:pulumi:Stack") return name === "mongolgpt-dev" ? "stack-metadata" : "other-stack-metadata"
   if (type === "pulumi:providers:cloudflare") return "cloudflare-provider"
   if (type === "pulumi:providers:random") return "random-provider"
   if (type === "pulumi:providers:pulumi-nodejs") return "dynamic-provider"
   if (type === "sst:sst:LinkRef") return "link-reference"
   if (type === "sst:sst:Version") return "component-version"
+  return null
+}
+
+function usageQueueResourceKind(type: string, name: string, inTarget: boolean) {
+  const generic = genericResourceKind(type, name)
+  if (generic) return generic
   if (!inTarget) return "other"
   if (type === "pulumi-nodejs:dynamic:Resource") {
     if (
@@ -328,6 +381,17 @@ function resourceKind(type: string, name: string, inTarget: boolean) {
   if (type === "cloudflare:index/workersCronTrigger:WorkersCronTrigger") return "cron-trigger"
   if (["sst:cloudflare:Worker", "sst:cloudflare:Cron", "sst:cloudflare:QueueWorkerSubscriber"].includes(type))
     return "component"
+  return "other"
+}
+
+function paymentServiceResourceKind(type: string, name: string, inTarget: boolean) {
+  const generic = genericResourceKind(type, name)
+  if (generic) return generic
+  if (!inTarget) return "other"
+  if (type === "pulumi-nodejs:dynamic:Resource" && name === "PaymentServiceUrl.sst.cloudflare.WorkerUrl")
+    return "worker-url"
+  if (type === "cloudflare:index/workersScript:WorkersScript") return "worker-script"
+  if (type === "sst:cloudflare:Worker") return "component"
   return "other"
 }
 
