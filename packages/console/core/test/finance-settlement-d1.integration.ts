@@ -105,6 +105,182 @@ try {
     return (await db.batch([...callback(db), doomed])).slice(0, -1)
   }) as typeof Database.batch
 
+  // The admin entrypoint must keep source evidence and its live permission guard in the money batch.
+  const adminContext = {
+    id: `adm_${"A".repeat(26)}`,
+    email: "statement-owner@example.test",
+    subject: "synthetic-owner",
+    role: "owner" as const,
+    permissions: ["admin.access", "billing.read", "payments.settle"] as (
+      | "admin.access"
+      | "billing.read"
+      | "payments.settle"
+    )[],
+    requestID: "synthetic-statement",
+    bootstrapped: false,
+  }
+  await run(
+    "insert into platform_admin(id,email,access_subject,role,status) values (?,?,?,'owner','active')",
+    adminContext.id,
+    adminContext.email,
+    adminContext.subject,
+  )
+  const statementRequest = new Request("https://admin.dev.mgpt.mn/billing/settlements", {
+    method: "POST",
+    headers: {
+      origin: "https://admin.dev.mgpt.mn",
+      "sec-fetch-site": "same-origin",
+      "content-type": "application/x-www-form-urlencoded",
+    },
+  })
+  const adminDependencies = {
+    batch,
+    recordFinancePaymentSettlement: native.recordFinancePaymentSettlement,
+    writeAdminAudit: async (input: Parameters<typeof native.adminAuditQuery>[1]) => {
+      await batch((db) => [native.adminAuditQuery(db, input)])
+    },
+  }
+  const statementInput = (id: string) => ({
+    invoiceID: id,
+    kind: "payment",
+    externalSettlementID: `merchant-line-${id}`,
+    statementReference: "Synthetic monthly statement",
+    grossAmountMNT: "100000",
+    feeAmountMNT: "1000",
+    taxAmountMNT: "100",
+    netAmountMNT: "98900",
+    effectiveAt: "2026-09-12T09:00:00",
+    confirmation: "verified",
+  })
+  for (const [index, provider] of ["qpay", "bonum"].entries()) {
+    const seeded = await seed(String(index + 1).repeat(26), provider as "qpay" | "bonum")
+    const form = statementInput(seeded.paymentInvoiceID)
+    equal((await native.recordAdminFinanceSettlement(adminContext, statementRequest, form, adminDependencies)).ok, true)
+    equal(await count(seeded.paymentInvoiceID), { settlements: 1, costs: 2 })
+    const detail = await native.getAdminFinanceSettlement(adminContext, seeded.paymentInvoiceID, { batch })
+    equal(detail.settlements[0].netAmountMNT, 98900)
+    equal(detail.settlements[0].effectiveAt, "2026-09-12T01:00:00.000Z")
+    const audit = await row(
+      "select metadata from admin_audit_log where action='payments.settle' and target_id=? and outcome='success'",
+      seeded.paymentInvoiceID,
+    )
+    equal(JSON.parse(audit?.metadata as string).statement_reference, form.statementReference)
+    const replay = await native.recordAdminFinanceSettlement(
+      adminContext,
+      statementRequest,
+      { ...form, effectiveAt: "2026-09-12T09:00" },
+      adminDependencies,
+    )
+    equal(replay.ok, true)
+    equal(replay.message.includes("Давхар"), true)
+    for (const patch of [
+      { feeAmountMNT: "1100", netAmountMNT: "98800" },
+      { statementReference: "Changed source" },
+      { externalSettlementID: `second-line-${seeded.paymentInvoiceID}` },
+    ]) {
+      equal(
+        (
+          await native.recordAdminFinanceSettlement(
+            adminContext,
+            statementRequest,
+            { ...form, ...patch },
+            adminDependencies,
+          )
+        ).ok,
+        false,
+      )
+      equal(await count(seeded.paymentInvoiceID), { settlements: 1, costs: 2 })
+    }
+    if (provider === "bonum") {
+      await native.applyPaymentEvent(
+        {
+          id: `pev_${"F".repeat(26)}`,
+          provider: "bonum",
+          merchantAccountID: seeded.merchantAccountID,
+          externalEventID: "statement-refund",
+          externalInvoiceID: `invoice-${"2".repeat(26)}`,
+          externalPaymentID: `payment-${"2".repeat(26)}`,
+          type: "refunded",
+          amount: 100000,
+          currency: "MNT",
+          payloadHash: "c".repeat(64),
+          occurredAt: now + 1000,
+        },
+        undefined,
+        { batch },
+      )
+      equal(
+        (
+          await native.recordAdminFinanceSettlement(
+            adminContext,
+            statementRequest,
+            {
+              ...form,
+              kind: "refund",
+              externalSettlementID: "synthetic-refund-line",
+              grossAmountMNT: "-100000",
+              feeAmountMNT: "-1000",
+              taxAmountMNT: "-100",
+              netAmountMNT: "-98900",
+            },
+            adminDependencies,
+          )
+        ).ok,
+        true,
+      )
+      equal(await count(seeded.paymentInvoiceID), { settlements: 2, costs: 4 })
+    }
+  }
+  const auditFailure = await seed("3".repeat(26))
+  await run(
+    "create trigger synthetic_statement_audit_failure before insert on admin_audit_log when NEW.action='payments.settle' and NEW.outcome='success' begin select raise(ABORT,'synthetic audit failure'); end",
+  )
+  equal(
+    (
+      await native.recordAdminFinanceSettlement(
+        adminContext,
+        statementRequest,
+        statementInput(auditFailure.paymentInvoiceID),
+        adminDependencies,
+      )
+    ).ok,
+    false,
+  )
+  equal(await count(auditFailure.paymentInvoiceID), { settlements: 0, costs: 0 })
+  await run("drop trigger synthetic_statement_audit_failure")
+  const revoked = await seed("4".repeat(26))
+  await run("update platform_admin set status='suspended' where id=?", adminContext.id)
+  equal(
+    (
+      await native.recordAdminFinanceSettlement(
+        adminContext,
+        statementRequest,
+        statementInput(revoked.paymentInvoiceID),
+        adminDependencies,
+      )
+    ).ok,
+    false,
+  )
+  equal(await count(revoked.paymentInvoiceID), { settlements: 0, costs: 0 })
+  await run("update platform_admin set status='active' where id=?", adminContext.id)
+
+  const concurrent = await seed("5".repeat(26))
+  const simultaneous = await Promise.all(
+    Array.from({ length: 3 }, () =>
+      native.recordAdminFinanceSettlement(
+        adminContext,
+        statementRequest,
+        statementInput(concurrent.paymentInvoiceID),
+        adminDependencies,
+      ),
+    ),
+  )
+  equal(
+    simultaneous.every((result) => result.ok),
+    true,
+  )
+  equal(await count(concurrent.paymentInvoiceID), { settlements: 1, costs: 2 })
+
   for (const provider of ["qpay", "bonum"] as const) {
     const input = await seed(provider, provider)
     const first = await record(input)

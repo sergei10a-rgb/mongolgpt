@@ -73,6 +73,7 @@ const mutationMatrix = [
   { name: "users.suspend", allowed: ["owner", "administrator"] },
   { name: "payments.cancel", allowed: ["owner", "administrator"] },
   { name: "payments.refund", allowed: ["owner", "administrator"] },
+  { name: "payments.settle", allowed: ["owner", "administrator"] },
   { name: "payments.recover", allowed: ["owner", "administrator"] },
   { name: "plans.manage", allowed: ["owner", "administrator"] },
   { name: "support.manage", allowed: ["owner", "administrator", "support"] },

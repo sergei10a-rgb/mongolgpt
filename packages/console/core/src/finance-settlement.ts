@@ -7,7 +7,7 @@ import {
   recordFinanceCostEntryWithDb,
 } from "./finance-ledger"
 import { Identifier } from "./identifier"
-import { paymentBatchGuard, type PaymentBatchQuery } from "./payment-ledger"
+import { paymentBatchGuard, type PaymentBatchDatabase, type PaymentBatchQuery } from "./payment-ledger"
 import { sha256Hex, stableJson } from "./payment-provider"
 import {
   FinancePaymentSettlementKinds,
@@ -215,7 +215,13 @@ async function paymentSettlementCosts(
 
 export async function recordFinancePaymentSettlement(
   input: RecordFinancePaymentSettlementInput,
-  dependencies: { batch?: typeof Database.batch } = {},
+  dependencies: {
+    batch?: typeof Database.batch
+    effect?: (
+      db: PaymentBatchDatabase,
+      result: { settlement: ReturnType<typeof paymentSettlementValues>; replay: boolean },
+    ) => PaymentBatchQuery[]
+  } = {},
 ) {
   const settlement = RecordFinancePaymentSettlementSchema.parse(input)
   const batch = dependencies.batch ?? Database.batch
@@ -290,6 +296,7 @@ export async function recordFinancePaymentSettlement(
             ),
           ),
           ...costQueries,
+          ...(dependencies.effect?.(db, { settlement: values, replay: Boolean(previous[0]) }) ?? []),
           db
             .select()
             .from(FinanceCostEntryTable)

@@ -48,7 +48,7 @@ test("every admin page RPC uses the data-only boundary without changing server-o
     }
     visit(syntax)
   }
-  expect(endpoints).toBe(19)
+  expect(endpoints).toBe(21)
   const response = await Bun.file(new URL("lib/admin-response.ts", root)).text()
   expect(response).not.toContain("X-Revalidate")
   expect(response).not.toContain("X-Single-Flight")

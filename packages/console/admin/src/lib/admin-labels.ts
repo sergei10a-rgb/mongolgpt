@@ -18,6 +18,7 @@ const actions: Record<string, string> = {
   "payments.cancel": "Нэхэмжлэх цуцлах",
   "payments.cancel.requested": "Нэхэмжлэх цуцлах хүсэлт илгээх",
   "payments.refund": "Төлбөр буцаах",
+  "payments.settle": "Мерчантын тооцоо бүртгэх",
   "payments.refund.requested": "Төлбөр буцаах хүсэлт илгээх",
   "payment_recovery.retry": "Төлбөрийн боловсруулалтыг дахин товлох",
 }

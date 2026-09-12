@@ -500,7 +500,9 @@ export function AdminBillingView(props: { data: AdminBillingData; recoveries: Ad
                   {(invoice) => (
                     <tr>
                       <td>
-                        <code>{invoice.id}</code>
+                        <A href={`/billing/settlements/${invoice.id}`}>
+                          <code>{invoice.id}</code>
+                        </A>
                       </td>
                       <td data-workspace>
                         <strong>{invoice.workspaceName}</strong>

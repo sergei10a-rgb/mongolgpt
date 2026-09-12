@@ -1833,7 +1833,96 @@ td[data-workspace] small {
   }
 }
 
+[data-component="settlement-invoice"] dl,
+[data-component="settlement-form"] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+}
+
+[data-component="settlement-invoice"] dd {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+
+[data-component="settlement-invoice"] dt,
+[data-component="settlement-form"] label > span {
+  font-size: 12px;
+  color: #686d73;
+}
+
+[data-component="settlement-form"] label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+[data-component="settlement-form"] input:not([type="checkbox"]),
+[data-component="settlement-form"] select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid #d5d8dc;
+  border-radius: 4px;
+  background: #fff;
+  color: #17191c;
+  font: inherit;
+}
+
+[data-component="settlement-form"] [data-confirmation] {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+}
+
+[data-component="settlement-form"] [type="checkbox"] {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+[data-component="settlement-form"] button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 40px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 4px;
+  background: #17191c;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+[data-component="settlement-form"] button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+@media (max-width: 620px) {
+  [data-component="settlement-invoice"] dl,
+  [data-component="settlement-form"] {
+    grid-template-columns: 1fr;
+  }
+  [data-component="settlement-form"] button {
+    width: 100%;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
+  [data-component="settlement-form"] input:not([type="checkbox"]),
+  [data-component="settlement-form"] select {
+    border-color: #34383d;
+    background: #191c1f;
+    color: #d8dcdf;
+  }
+
+  [data-component="settlement-invoice"] dt,
+  [data-component="settlement-form"] label > span {
+    color: #9ea4aa;
+  }
+
   :root,
   body {
     color: #f1f3f4;
