@@ -285,6 +285,16 @@ ol {
   padding: 0 !important;
 }
 
+.sl-markdown-content ul:not(:where(.not-content *, .sl-steps, [role])) {
+  list-style: disc !important;
+  padding-inline-start: 1.5em !important;
+}
+
+.sl-markdown-content ol:not(:where(.not-content *, .sl-steps, [role])) {
+  list-style: decimal !important;
+  padding-inline-start: 1.5em !important;
+}
+
 .sl-markdown-content .tab > [role="tab"][aria-selected="true"] {
   border-color: var(--color-text-strong);
 }
@@ -444,11 +454,6 @@ nav.sidebar ul.top-level > li > details > summary .group-label > span {
     overflow-wrap: anywhere;
     word-break: break-word;
   }
-}
-
-.sl-markdown-content [data-component="settlement-steps"] ol {
-  list-style: decimal !important;
-  padding-inline-start: 1.5em !important;
 }
 
 .sl-markdown-content [data-component="settlement-examples"] {

@@ -56,14 +56,24 @@ test("desktop агуулгын жагсаалтын урт Монгол гарч
   expect(rule).toContain("overflow-wrap: anywhere")
 })
 
-test("тооцооны заавар нь дугаартай алхам, бүхэл харагдах мөнгөн дүнтэй байна", () => {
+test("гарын авлагын жагсаалтыг дугаарлаж, цэс болон tab-ийн загварыг хадгална", () => {
+  const css = readFileSync(join(import.meta.dir, "..", "src", "styles", "custom.css"), "utf8").replaceAll("\r\n", "\n")
+  for (const [tag, marker] of [
+    ["ol", "decimal"],
+    ["ul", "disc"],
+  ]) {
+    expect(css).toContain(
+      `.sl-markdown-content ${tag}:not(:where(.not-content *, .sl-steps, [role])) {\n  list-style: ${marker} !important;\n  padding-inline-start: 1.5em !important;\n}`,
+    )
+  }
+})
+
+test("тооцооны заавар нь бүхэл харагдах мөнгөн дүнтэй байна", () => {
   const source = readFileSync(join(docsRoot, "admin.mdx"), "utf8")
   const css = readFileSync(join(import.meta.dir, "..", "src", "styles", "custom.css"), "utf8")
   expect(source).toContain('data-component="settlement-steps"')
   expect(source).toContain('aria-label="Төлбөр ба буцаалтын тооцооны жишээ"')
   expect(source).toContain('tabindex="0"')
-  expect(css).toMatch(/\[data-component="settlement-steps"\] ol \{[^}]*list-style: decimal !important/)
-  expect(css).toMatch(/\[data-component="settlement-steps"\] ol \{[^}]*padding-inline-start: 1.5em !important/)
   expect(css).toMatch(/\[data-component="settlement-examples"\] \{[^}]*overflow-x: auto/)
   expect(css).toMatch(/\[data-component="settlement-examples"\] table \{[^}]*min-width: 620px/)
   expect(css).toMatch(/\[data-component="settlement-examples"\] :is\(th, td\) \{[^}]*white-space: nowrap/)
