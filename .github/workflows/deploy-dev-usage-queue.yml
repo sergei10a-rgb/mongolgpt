@@ -1,7 +1,12 @@
-name: Audit dev usage queue deployment
+name: Deploy dev usage queue workers
 
 on:
   workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type DEPLOY DEV USAGE QUEUE"
+        required: true
+        type: string
 
 concurrency:
   group: cloudflare-deploy-dev
@@ -29,22 +34,38 @@ env:
   MONGOLGPT_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
 
 jobs:
-  audit:
+  deploy:
     if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     environment: dev
     steps:
+      - name: Validate bounded dev confirmation
+        env:
+          DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$DEPLOY_CONFIRMATION" != "DEPLOY DEV USAGE QUEUE" ]; then
+            echo "Dev queue deployment confirmation does not match."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
-      - name: Verify private audit reporting
-        run: bun test --cwd packages/script test/usage-queue-deployment-audit.test.ts test/usage-queue-deployment-guard.test.ts
+      - name: Verify real queue and deployment boundaries
+        run: |
+          bun test --cwd packages/runtime test/usage-queue-workerd.test.ts
+          bun test --cwd packages/script test/usage-queue-deployment-guard.test.ts test/usage-queue-live-check.test.ts test/usage-queue-deployment-workflow.test.ts
 
-      - name: Preview existing dev queue worker updates without deploying
+      - name: Guard and update only existing dev queue workers
         env:
           CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
@@ -67,13 +88,20 @@ jobs:
             exit 1
           fi
           umask 077
-          diff_file="$(mktemp "$RUNNER_TEMP/mongolgpt-usage-diff.XXXXXX")"
-          stderr_file="$(mktemp "$RUNNER_TEMP/mongolgpt-usage-stderr.XXXXXX")"
-          trap 'rm -f "$diff_file" "$stderr_file"' EXIT
-          # Cron constructs its Handler worker without parenting it to the Cron.
-          if ! bun sst diff --stage=dev --target UsageQueueSubscriber,UsageQueueHeartbeatHandler --json --print-logs >"$diff_file" 2>"$stderr_file"; then
+          diff_file="$(mktemp "$RUNNER_TEMP/mongolgpt-queue-diff.XXXXXX")"
+          stdout_file="$(mktemp "$RUNNER_TEMP/mongolgpt-queue-output.XXXXXX")"
+          stderr_file="$(mktemp "$RUNNER_TEMP/mongolgpt-queue-errors.XXXXXX")"
+          trap 'rm -f "$diff_file" "$stdout_file" "$stderr_file"' EXIT
+          targets="UsageQueueSubscriber,UsageQueueHeartbeatHandler"
+          if ! bun sst diff --stage=dev --target "$targets" --json --print-logs >"$diff_file" 2>"$stderr_file"; then
             bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log
             exit 1
           fi
           bun script/audit-usage-queue-deployment.ts "$diff_file"
           bun script/verify-usage-queue-deployment.ts "$diff_file"
+          started_at="$(bun -e 'process.stdout.write(String(Date.now()))')"
+          if ! bun sst deploy --stage=dev --target "$targets" --print-logs >"$stdout_file" 2>"$stderr_file"; then
+            bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$stdout_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log
+            exit 1
+          fi
+          bun script/check-dev-usage-queue.ts "$started_at"

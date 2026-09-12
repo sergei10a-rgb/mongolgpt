@@ -62,8 +62,8 @@ export function summarizeUsageQueueDeploymentDiff(value: unknown) {
     }
     const target = targets.find((name) => urn[3].startsWith(name)) ?? "outside-targets"
     const detail = record(entry.detailedDiff)
-    const oldInputs = record(record(entry.oldState)?.inputs)
-    const newInputs = record(record(entry.newState)?.inputs)
+    const oldInputs = record(record(entry.old)?.inputs)
+    const newInputs = record(record(entry.new)?.inputs)
     return {
       target,
       operation: entry.op,

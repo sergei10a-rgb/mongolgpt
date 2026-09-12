@@ -11,8 +11,8 @@ function change(name = "UsageQueueHeartbeatHandlerScript") {
     type,
     op: "update",
     detailedDiff: { content: { diffKind: "update" }, "textBindings.PRIVATE_VALUE": { diffKind: "update" } },
-    oldState: { inputs: { credential: "private-old-state" } },
-    newState: { inputs: { credential: "private-new-state", content: "private-source" } },
+    old: { inputs: { credential: "private-old-state" } },
+    new: { inputs: { credential: "private-new-state", content: "private-source" } },
   }
 }
 
@@ -76,14 +76,14 @@ describe("dev usage queue deployment audit", () => {
       {
         ...change(),
         detailedDiff: undefined,
-        oldState: {
+        old: {
           inputs: { bindings: [{ text: "private-old" }], accountId: "same", __provider: "private-provider-old" },
         },
-        newState: {
+        new: {
           inputs: { bindings: [{ text: "private-new" }], accountId: "same", __provider: "private-provider-new" },
         },
       },
-      { ...change(), oldState: undefined, newState: undefined },
+      { ...change(), old: undefined, new: undefined },
     ])
     expect(report.changes[0]).toMatchObject({
       detailedDiffAvailable: false,
@@ -127,6 +127,7 @@ describe("dev usage queue deployment audit", () => {
     expect(workflow.jobs.audit.if).toContain("github.ref == 'refs/heads/main'")
     const commands = workflow.jobs.audit.steps.map((step: { run?: string }) => step.run ?? "").join("\n")
     expect(commands).toContain("sst diff --stage=dev --target UsageQueueSubscriber,UsageQueueHeartbeatHandler --json")
+    expect(commands).toContain('verify-usage-queue-deployment.ts "$diff_file"')
     expect(commands).toContain("umask 077")
     expect(commands).toContain("trap 'rm -f")
     expect(commands).not.toMatch(/sst (?:deploy|refresh|remove|unlock|state)|--decrypt|db:migrate|wrangler|curl|cat /)
