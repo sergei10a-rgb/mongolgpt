@@ -125,4 +125,32 @@ describe("admin support mutations", () => {
     expect(result).toMatchObject({ ok: false })
     expect(events).toEqual(["mutate:reply", "success-audit", "failure-audit"])
   })
+
+  test("does not claim an uncertain write was unchanged or replay it when failure auditing is unavailable", async () => {
+    const events: string[] = []
+    const current = dependencies(events, [])
+    current.mutateAdminSupportTicket = async () => {
+      events.push("uncertain-write")
+      throw new Error("Synthetic lost acknowledgement")
+    }
+    current.writeAdminAudit = async () => {
+      events.push("unavailable-audit")
+      throw new Error("Synthetic unavailable audit")
+    }
+    const result = await mutateAdminSupport(
+      manager,
+      request(),
+      {
+        operation: "update",
+        ticketID,
+        expectedLockVersion: "0",
+        priority: "high",
+      },
+      current,
+    )
+    expect(result.ok).toBe(false)
+    expect(result.message).toContain("Хуудсаа шинэчилж")
+    expect(result.message).not.toContain("Өөрчлөлт хийгдээгүй")
+    expect(events).toEqual(["uncertain-write", "unavailable-audit"])
+  })
 })

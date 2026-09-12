@@ -466,6 +466,37 @@ try {
   equal(await counts(updateTicket.id), { messages: 1, audits: 1 })
   equal((await admin(update)).ok, false)
   equal(await counts(updateTicket.id), { messages: 1, audits: 1 })
+  const unavailableAuditInput = await seed("uncertain_update_no_audit")
+  const unavailableAuditTicket = await create(unavailableAuditInput)
+  let failureAuditCalls = 0
+  const unconfirmed = await native.mutateAdminSupport(
+    manager,
+    request(),
+    {
+      operation: "update",
+      expectedLockVersion: 0,
+      priority: "high",
+      ticketID: unavailableAuditTicket.id,
+    },
+    {
+      batch: onCall(2, async () => undefined, true),
+      mutateAdminSupportTicket: native.mutateAdminSupportTicket,
+      adminAuditQuery: native.adminAuditQuery,
+      writeAdminAudit: async () => {
+        failureAuditCalls++
+        throw new Error("Synthetic unavailable failure audit")
+      },
+    },
+  )
+  equal(unconfirmed.ok, false)
+  equal(unconfirmed.message.includes("Өөрчлөлт хийгдээгүй"), false)
+  equal(unconfirmed.message.includes("Хуудсаа шинэчилж"), true)
+  equal(failureAuditCalls, 1)
+  equal((await state(unavailableAuditTicket.id))?.priority, "high")
+  equal((await state(unavailableAuditTicket.id))?.lock_version, 1)
+  equal(await counts(unavailableAuditTicket.id), { messages: 1, audits: 1 })
+  equal((await admin({ ...update, ticketID: unavailableAuditTicket.id })).ok, false)
+  equal(await counts(unavailableAuditTicket.id), { messages: 1, audits: 1 })
   console.log(`SUPPORT_D1_RESULT ${JSON.stringify({ ok: true, checks })}`)
 } finally {
   await platform?.dispose()

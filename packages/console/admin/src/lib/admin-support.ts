@@ -125,7 +125,7 @@ export async function mutateAdminSupport(
     } catch {
       return {
         ok: false as const,
-        message: "Өөрчлөлт хийгдээгүй. Аудитын бүртгэл бичигдээгүй тул үйлдлийг баталгаажуулсангүй.",
+        message: "Үйлдлийн үр дүнг баталгаажуулж чадсангүй. Хуудсаа шинэчилж тусламжийн хүсэлтийн төлөвийг шалгана уу.",
       }
     }
     return { ok: false as const, message: failure.message }
@@ -183,6 +183,7 @@ function mutationFailure(error: unknown) {
   return {
     outcome: "failure" as const,
     code: "internal_error",
-    message: "Тусламжийн хүсэлтийг өөрчлөх үед алдаа гарлаа.",
+    message:
+      "Үйлдлийн үр дүн тодорхойгүй байна. Дахин оролдохын өмнө хуудсаа шинэчилж тусламжийн хүсэлтийн төлөвийг шалгана уу.",
   }
 }
