@@ -27,9 +27,17 @@ describe("dev usage queue deployment audit", () => {
       resource: "worker-script",
       sameResourceAs: null,
       identicalPreviousEvent: null,
+      identicalPreviousStatesExceptOutputs: null,
       allowedIndividually: false,
       rejectionReason: "wrong-worker-account",
       metadataEvidence: null,
+      workerDiffEvidence: {
+        inputPresence: [],
+        unknownEngineFieldCount: 0,
+        replacementMetadataKind: "absent",
+        replacementFields: [],
+        detailedInputFields: [],
+      },
       opaqueInputFields: [],
       opaqueInputKinds: [],
       engineDiffAvailable: false,
@@ -255,6 +263,100 @@ describe("dev usage queue deployment audit", () => {
       },
     })
     expect(JSON.stringify(report)).not.toContain("private")
+  })
+
+  test("diagnoses known worker fields and input presence without authorizing settings or exposing values", () => {
+    const entry = {
+      ...change(),
+      diffs: ["id", "limits", "tailConsumers", "etag", "private-key", 123],
+      keys: ["limits", "private-key"],
+      detailedDiff: {
+        "limits.private-child": { inputDiff: true },
+        "private-key": { inputDiff: true },
+        etag: { inputDiff: false },
+      },
+      old: { inputs: { etag: null, limits: { cpuMs: "private-old" } }, outputs: { id: "private-id" } },
+      new: { inputs: { limits: { cpuMs: "private-new" }, tailConsumers: [] }, outputs: { id: "private-id" } },
+    }
+    const report = summarizeUsageQueueDeploymentDiff([entry])
+    expect(report.changes[0].engineDiffFields).toEqual(["etag", "id", "limits", "other", "tailConsumers"])
+    expect(report.changes[0].workerDiffEvidence).toEqual({
+      inputPresence: [
+        { field: "etag", old: true, new: false },
+        { field: "id", old: false, new: false },
+        { field: "limits", old: true, new: true },
+        { field: "tailConsumers", old: false, new: true },
+      ],
+      unknownEngineFieldCount: 2,
+      replacementMetadataKind: "array",
+      replacementFields: ["limits", "other"],
+      detailedInputFields: ["limits", "other"],
+    })
+    expect(report.changes[0].allowedIndividually).toBe(false)
+    expect(report.previewRejectionReason).not.toBeNull()
+    expect(JSON.stringify(report)).not.toMatch(/private-|cpuMs/)
+  })
+
+  test("reports whole-preview rejection and output-only event differences separately", () => {
+    const entry = {
+      urn: "urn:pulumi:dev::mongolgpt::pulumi:pulumi:Stack::mongolgpt-dev",
+      type: "pulumi:pulumi:Stack",
+      op: "update",
+      old: { inputs: {}, outputs: { private: "private-old" } },
+      new: { inputs: {}, outputs: { private: "private-new" } },
+    }
+    expect(summarizeUsageQueueDeploymentDiff([entry]).previewRejectionReason).toBeNull()
+    const repeated = { ...entry, new: { ...entry.new, outputs: { private: "private-different" } } }
+    const report = summarizeUsageQueueDeploymentDiff([entry, repeated])
+    expect(report.changes.every((change) => change.allowedIndividually)).toBe(true)
+    expect(report.previewRejectionReason).toBe("duplicate-resource")
+    expect(report.changes[1].identicalPreviousEvent).toBe(false)
+    expect(report.changes[1].identicalPreviousStatesExceptOutputs).toBe(true)
+    expect(
+      summarizeUsageQueueDeploymentDiff([entry, { ...repeated, new: { ...repeated.new, inputs: { private: true } } }])
+        .changes[1].identicalPreviousStatesExceptOutputs,
+    ).toBe(false)
+    expect(JSON.stringify(report)).not.toContain("private")
+  })
+
+  test("distinguishes the actual masked-binding guard failure causes", () => {
+    const pulumiSignatureProperty = "4dabf18193072939515e22adb298388d"
+    const pulumiHiddenValueSignature = "1b47061264138c4ac30d75fd1eb44270"
+    const inputs = {
+      accountId: "cc97ad90bfaf8a1da5de612eef2658f5",
+      scriptName: "mongolgpt-dev-usagequeueheartbeathandlerscript",
+      contentFile: "private-worker.js",
+      contentSha256: "a".repeat(64),
+      bindings: { [pulumiSignatureProperty]: pulumiHiddenValueSignature, ciphertext: "[secret]" },
+    }
+    const entry = {
+      ...change(),
+      detailedDiff: null,
+      keys: [],
+      diffs: ["contentSha256", "etag"],
+      old: { inputs },
+      new: { inputs: { ...inputs, contentSha256: "b".repeat(64) } },
+    }
+    expect(summarizeUsageQueueDeploymentDiff([entry]).previewRejectionReason).toBeNull()
+    const report = summarizeUsageQueueDeploymentDiff([
+      { ...entry, diffs: ["contentSha256", "private-unknown"] },
+      {
+        ...entry,
+        old: { inputs: { ...entry.old.inputs, etag: null } },
+        new: { inputs: { ...entry.new.inputs, etag: null } },
+      },
+      { ...entry, keys: ["private-replacement"] },
+    ])
+    expect(report.changes.map((change) => change.rejectionReason)).toEqual([
+      "unproved-worker-secret-bindings",
+      "unproved-worker-secret-bindings",
+      "unproved-worker-secret-bindings",
+    ])
+    expect(report.changes[0].workerDiffEvidence?.unknownEngineFieldCount).toBe(1)
+    expect(report.changes[1].workerDiffEvidence?.inputPresence).toContainEqual({ field: "etag", old: true, new: true })
+    expect(report.changes[2].workerDiffEvidence?.replacementFields).toEqual(["other"])
+    expect(report.previewRejectionReason).toBe("unproved-worker-secret-bindings")
+    expect(JSON.stringify(report)).not.toMatch(/private-|4dabf181|1b470612|aaaaaa|bbbbbb/)
   })
 
   test("rejects malformed metadata, wrong account stack or stage, and oversized arrays", () => {

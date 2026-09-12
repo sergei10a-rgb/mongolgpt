@@ -19,6 +19,19 @@ const operations = new Set([
 ])
 const fields = new Set([
   ...usageQueueWorkerComputedFields,
+  // Remaining public WorkersScript 6.15.0 schema fields and the Pulumi resource ID.
+  "annotations",
+  "assets",
+  "bodyPart",
+  "contentType",
+  "keepAssets",
+  "keepBindings",
+  "limits",
+  "migrations",
+  "placement",
+  "tailConsumers",
+  "usageModel",
+  "id",
   "content",
   "contentFile",
   "contentSha256",
@@ -91,16 +104,29 @@ export function summarizeUsageQueueDeploymentDiff(value: unknown) {
     const newInputs = record(record(entry.new)?.inputs)
     const sameResourceAs = seen.get(entry.urn) ?? null
     seen.set(entry.urn, index)
-    const rejectionReason = rejectionReasonFor(entry)
+    const rejectionReason = rejectionReasonFor([entry])
     return {
       target,
       operation: entry.op,
       resource: resourceKind(entry.type, urn[3], target !== "outside-targets"),
       sameResourceAs,
       identicalPreviousEvent: sameResourceAs === null ? null : isDeepStrictEqual(value[sameResourceAs], entry),
+      identicalPreviousStatesExceptOutputs:
+        sameResourceAs === null
+          ? null
+          : ["old", "new"].every((key) =>
+              isDeepStrictEqual(
+                { ...record(record(value[sameResourceAs])?.[key]), outputs: undefined },
+                { ...record(entry[key]), outputs: undefined },
+              ),
+            ),
       allowedIndividually: rejectionReason === null,
       rejectionReason,
       metadataEvidence: metadataEvidence(entry.type, oldInputs, newInputs),
+      workerDiffEvidence:
+        entry.type === "cloudflare:index/workersScript:WorkersScript"
+          ? workerDiffEvidence(entry, oldInputs, newInputs)
+          : null,
       opaqueInputFields: [
         ...new Set(
           [oldInputs, newInputs].flatMap((inputs) =>
@@ -137,7 +163,38 @@ export function summarizeUsageQueueDeploymentDiff(value: unknown) {
           : [],
     }
   })
-  return { stage: "dev", targets, count: changes.length, changes }
+  return { stage: "dev", targets, count: changes.length, previewRejectionReason: rejectionReasonFor(value), changes }
+}
+
+function workerDiffEvidence(
+  entry: Record<string, unknown>,
+  oldInputs: Record<string, unknown> | undefined,
+  newInputs: Record<string, unknown> | undefined,
+) {
+  const diffs = Array.isArray(entry.diffs) ? entry.diffs : []
+  const known = [...new Set(diffs.filter((key): key is string => typeof key === "string" && fields.has(key)))].sort()
+  return {
+    inputPresence: known.map((field) => ({
+      field,
+      old: oldInputs ? Object.hasOwn(oldInputs, field) : null,
+      new: newInputs ? Object.hasOwn(newInputs, field) : null,
+    })),
+    unknownEngineFieldCount: diffs.filter((key) => typeof key !== "string" || !fields.has(key)).length,
+    replacementMetadataKind: valueKind(entry.keys),
+    replacementFields: Array.isArray(entry.keys)
+      ? [...new Set(entry.keys.map((key) => (typeof key === "string" && fields.has(key) ? key : "other")))].sort()
+      : [],
+    detailedInputFields: [
+      ...new Set(
+        Object.entries(record(entry.detailedDiff) ?? {})
+          .filter(([, value]) => record(value)?.inputDiff === true)
+          .map(([path]) => {
+            const root = path.split(/[.\[]/, 1)[0]
+            return fields.has(root) ? root : "other"
+          }),
+      ),
+    ].sort(),
+  }
 }
 
 function metadataEvidence(
@@ -261,10 +318,10 @@ function resourceKind(type: string, name: string, inTarget: boolean) {
   return "other"
 }
 
-function rejectionReasonFor(entry: unknown) {
+function rejectionReasonFor(entries: unknown[]) {
   // Diagnostic only: the complete preview must still pass the separate guard.
   try {
-    verifyUsageQueueDeploymentDiff([entry])
+    verifyUsageQueueDeploymentDiff(entries)
     return null
   } catch (error) {
     return error instanceof UsageQueueDeploymentGuardError ? error.reason : "unexpected-validation-error"
