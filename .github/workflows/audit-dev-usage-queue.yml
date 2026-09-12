@@ -70,7 +70,8 @@ jobs:
           diff_file="$(mktemp "$RUNNER_TEMP/mongolgpt-usage-diff.XXXXXX")"
           stderr_file="$(mktemp "$RUNNER_TEMP/mongolgpt-usage-stderr.XXXXXX")"
           trap 'rm -f "$diff_file" "$stderr_file"' EXIT
-          if ! bun sst diff --stage=dev --target UsageQueueSubscriber,UsageQueueHeartbeat --json --print-logs >"$diff_file" 2>"$stderr_file"; then
+          # Cron constructs its Handler worker without parenting it to the Cron.
+          if ! bun sst diff --stage=dev --target UsageQueueSubscriber,UsageQueueHeartbeatHandler --json --print-logs >"$diff_file" 2>"$stderr_file"; then
             bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log
             exit 1
           fi

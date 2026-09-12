@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from "node:util"
+
 const targets = ["UsageQueueSubscriber", "UsageQueueHeartbeat"] as const
 const operations = new Set([
   "same",
@@ -38,6 +40,9 @@ const fields = new Set([
   "observability",
   "logpush",
   "mainModule",
+  "enabled",
+  "etag",
+  "__provider",
 ])
 
 // Report only bounded deployment metadata, never state inputs, outputs, or code.
@@ -57,10 +62,12 @@ export function summarizeUsageQueueDeploymentDiff(value: unknown) {
     }
     const target = targets.find((name) => urn[3].startsWith(name)) ?? "outside-targets"
     const detail = record(entry.detailedDiff)
+    const oldInputs = record(record(entry.oldState)?.inputs)
+    const newInputs = record(record(entry.newState)?.inputs)
     return {
       target,
       operation: entry.op,
-      resource: target === "outside-targets" ? "other" : resourceKind(entry.type),
+      resource: resourceKind(entry.type, urn[3], target !== "outside-targets"),
       fields: [
         ...new Set(
           Object.keys(detail ?? {}).map((path) => {
@@ -70,12 +77,33 @@ export function summarizeUsageQueueDeploymentDiff(value: unknown) {
         ),
       ].sort(),
       detailedDiffAvailable: detail !== undefined,
+      inputComparisonAvailable: oldInputs !== undefined && newInputs !== undefined,
+      changedInputFields:
+        oldInputs && newInputs
+          ? [
+              ...new Set(
+                [...Object.keys(oldInputs), ...Object.keys(newInputs)]
+                  .filter((key) => !isDeepStrictEqual(oldInputs[key], newInputs[key]))
+                  .map((key) => (fields.has(key) ? key : "other")),
+              ),
+            ].sort()
+          : [],
     }
   })
   return { stage: "dev", targets, count: changes.length, changes }
 }
 
-function resourceKind(type: string) {
+function resourceKind(type: string, name: string, inTarget: boolean) {
+  if (type === "pulumi:pulumi:Stack" && name === "mongolgpt-dev") return "stack-metadata"
+  if (!inTarget) return "other"
+  if (type === "pulumi-nodejs:dynamic:Resource") {
+    if (
+      ["UsageQueueSubscriberFunctionUrl", "UsageQueueHeartbeatHandlerUrl"].some(
+        (prefix) => name === `${prefix}.sst.cloudflare.WorkerUrl`,
+      )
+    )
+      return "worker-url"
+  }
   if (type === "cloudflare:index/workersScript:WorkersScript") return "worker-script"
   if (type === "cloudflare:index/queueConsumer:QueueConsumer") return "queue-consumer"
   if (type === "cloudflare:index/workersCronTrigger:WorkersCronTrigger") return "cron-trigger"

@@ -27,6 +27,8 @@ describe("dev usage queue deployment audit", () => {
       resource: "worker-script",
       fields: ["content", "textBindings"],
       detailedDiffAvailable: true,
+      inputComparisonAvailable: true,
+      changedInputFields: ["content", "other"],
     })
     expect(JSON.stringify(result)).not.toMatch(/private-|PRIVATE_VALUE|oldState|newState/)
   })
@@ -51,6 +53,45 @@ describe("dev usage queue deployment audit", () => {
     expect(
       summarizeUsageQueueDeploymentDiff([{ ...change(), detailedDiff: undefined }]).changes[0].detailedDiffAvailable,
     ).toBe(false)
+  })
+
+  test("distinguishes stack metadata and exact worker URL resources without disclosing unknown names", () => {
+    const entry = (type: string, name: string) => ({
+      ...change(),
+      type,
+      urn: `urn:pulumi:dev::mongolgpt::${type}::${name}`,
+    })
+    const report = summarizeUsageQueueDeploymentDiff([
+      entry("pulumi:pulumi:Stack", "mongolgpt-dev"),
+      entry("pulumi-nodejs:dynamic:Resource", "UsageQueueSubscriberFunctionUrl.sst.cloudflare.WorkerUrl"),
+      entry("pulumi-nodejs:dynamic:Resource", "UsageQueueHeartbeatHandlerUrl.sst.cloudflare.WorkerUrl"),
+      entry("pulumi-nodejs:dynamic:Resource", "UsageQueueHeartbeat-secret"),
+    ])
+    expect(report.changes.map((item) => item.resource)).toEqual(["stack-metadata", "worker-url", "worker-url", "other"])
+    expect(JSON.stringify(report)).not.toContain("-secret")
+  })
+
+  test("reports input changes when detailed diff is unavailable and never prints values", () => {
+    const report = summarizeUsageQueueDeploymentDiff([
+      {
+        ...change(),
+        detailedDiff: undefined,
+        oldState: {
+          inputs: { bindings: [{ text: "private-old" }], accountId: "same", __provider: "private-provider-old" },
+        },
+        newState: {
+          inputs: { bindings: [{ text: "private-new" }], accountId: "same", __provider: "private-provider-new" },
+        },
+      },
+      { ...change(), oldState: undefined, newState: undefined },
+    ])
+    expect(report.changes[0]).toMatchObject({
+      detailedDiffAvailable: false,
+      inputComparisonAvailable: true,
+      changedInputFields: ["__provider", "bindings"],
+    })
+    expect(report.changes[1]).toMatchObject({ inputComparisonAvailable: false, changedInputFields: [] })
+    expect(JSON.stringify(report)).not.toContain("private-")
   })
 
   test("rejects malformed metadata, wrong account stack or stage, and oversized arrays", () => {
@@ -85,7 +126,7 @@ describe("dev usage queue deployment audit", () => {
     expect(workflow.jobs.audit.if).toContain("github.repository == 'sergei10a-rgb/mongolgpt'")
     expect(workflow.jobs.audit.if).toContain("github.ref == 'refs/heads/main'")
     const commands = workflow.jobs.audit.steps.map((step: { run?: string }) => step.run ?? "").join("\n")
-    expect(commands).toContain("sst diff --stage=dev --target UsageQueueSubscriber,UsageQueueHeartbeat --json")
+    expect(commands).toContain("sst diff --stage=dev --target UsageQueueSubscriber,UsageQueueHeartbeatHandler --json")
     expect(commands).toContain("umask 077")
     expect(commands).toContain("trap 'rm -f")
     expect(commands).not.toMatch(/sst (?:deploy|refresh|remove|unlock|state)|--decrypt|db:migrate|wrangler|curl|cat /)
