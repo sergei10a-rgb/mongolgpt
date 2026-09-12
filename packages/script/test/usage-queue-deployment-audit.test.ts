@@ -1,0 +1,129 @@
+import { describe, expect, test } from "bun:test"
+import { tmpdir } from "node:os"
+import { join, resolve } from "node:path"
+import { unlink } from "node:fs/promises"
+import { summarizeUsageQueueDeploymentDiff } from "../src/usage-queue-deployment-audit"
+
+const type = "cloudflare:index/workersScript:WorkersScript"
+function change(name = "UsageQueueHeartbeatHandlerScript") {
+  return {
+    urn: `urn:pulumi:dev::mongolgpt::sst:cloudflare:Cron$sst:cloudflare:Worker$${type}::${name}`,
+    type,
+    op: "update",
+    detailedDiff: { content: { diffKind: "update" }, "textBindings.PRIVATE_VALUE": { diffKind: "update" } },
+    oldState: { inputs: { credential: "private-old-state" } },
+    newState: { inputs: { credential: "private-new-state", content: "private-source" } },
+  }
+}
+
+describe("dev usage queue deployment audit", () => {
+  test("summarizes both targets without printing state or nested field names", () => {
+    const result = summarizeUsageQueueDeploymentDiff([change(), change("UsageQueueSubscriberFunctionScript")])
+    expect(result.count).toBe(2)
+    expect(result.changes.map((item) => item.target)).toEqual(["UsageQueueHeartbeat", "UsageQueueSubscriber"])
+    expect(result.changes[0]).toEqual({
+      target: "UsageQueueHeartbeat",
+      operation: "update",
+      resource: "worker-script",
+      fields: ["content", "textBindings"],
+      detailedDiffAvailable: true,
+    })
+    expect(JSON.stringify(result)).not.toMatch(/private-|PRIVATE_VALUE|oldState|newState/)
+  })
+
+  test("reports out-of-scope and destructive changes without approving them", () => {
+    const result = summarizeUsageQueueDeploymentDiff([{ ...change("ConsoleWorkerScript"), op: "delete" }])
+    expect(result.changes[0]).toMatchObject({ target: "outside-targets", operation: "delete", resource: "other" })
+    expect(JSON.stringify(result)).not.toContain("ConsoleWorkerScript")
+  })
+
+  test("does not leak unrecognized fields or their values", () => {
+    const result = summarizeUsageQueueDeploymentDiff([
+      { ...change(), detailedDiff: { "secret-token": "private-value" } },
+    ])
+    expect(result.changes[0].fields).toEqual(["other"])
+    expect(JSON.stringify(result)).not.toContain("secret-token")
+    expect(JSON.stringify(result)).not.toContain("private-value")
+  })
+
+  test("distinguishes missing detailed diff from no changes", () => {
+    expect(summarizeUsageQueueDeploymentDiff([]).count).toBe(0)
+    expect(
+      summarizeUsageQueueDeploymentDiff([{ ...change(), detailedDiff: undefined }]).changes[0].detailedDiffAvailable,
+    ).toBe(false)
+  })
+
+  test("rejects malformed metadata, wrong account stack or stage, and oversized arrays", () => {
+    for (const invalid of [
+      null,
+      {},
+      [null],
+      [{}],
+      Array(2_001).fill(change()),
+      [{ ...change(), urn: change().urn.replace("pulumi:dev", "pulumi:production") }],
+      [{ ...change(), urn: change().urn.replace("::mongolgpt::", "::another::") }],
+      [{ ...change(), type: "other" }],
+      [{ ...change(), op: "private-secret" }],
+    ])
+      expect(() => summarizeUsageQueueDeploymentDiff(invalid)).toThrow()
+  })
+
+  test("workflow is manual, dev-only, serialized, and has no mutation or raw state artifact", async () => {
+    const source = await Bun.file(
+      new URL("../../../.github/workflows/audit-dev-usage-queue.yml", import.meta.url),
+    ).text()
+    const workflow = Bun.YAML.parse(source) as {
+      on: unknown
+      permissions: unknown
+      concurrency: unknown
+      jobs: { audit: { environment: string; if: string; steps: Array<{ run?: string }> } }
+    }
+    expect(workflow.on).toEqual({ workflow_dispatch: null })
+    expect(workflow.permissions).toEqual({ contents: "read" })
+    expect(workflow.concurrency).toEqual({ group: "cloudflare-deploy-dev", "cancel-in-progress": false })
+    expect(workflow.jobs.audit.environment).toBe("dev")
+    expect(workflow.jobs.audit.if).toContain("github.repository == 'sergei10a-rgb/mongolgpt'")
+    expect(workflow.jobs.audit.if).toContain("github.ref == 'refs/heads/main'")
+    const commands = workflow.jobs.audit.steps.map((step: { run?: string }) => step.run ?? "").join("\n")
+    expect(commands).toContain("sst diff --stage=dev --target UsageQueueSubscriber,UsageQueueHeartbeat --json")
+    expect(commands).toContain("umask 077")
+    expect(commands).toContain("trap 'rm -f")
+    expect(commands).not.toMatch(/sst (?:deploy|refresh|remove|unlock|state)|--decrypt|db:migrate|wrangler|curl|cat /)
+    expect(source).not.toContain("upload-artifact")
+  })
+
+  test("actual CLI redacts private state and fails closed on invalid input", async () => {
+    const file = join(tmpdir(), `mongolgpt-queue-audit-${crypto.randomUUID()}.json`)
+    const script = resolve(import.meta.dir, "../../../script/audit-usage-queue-deployment.ts")
+    try {
+      for (const input of [
+        JSON.stringify([change()]),
+        '{"private-secret":"unterminated',
+        JSON.stringify([
+          {
+            ...change(),
+            urn: change().urn.replace("pulumi:dev", "pulumi:production"),
+          },
+        ]),
+      ]) {
+        await Bun.write(file, input)
+        const child = Bun.spawn([process.execPath, script, file], { stdout: "pipe", stderr: "pipe" })
+        const stdout = await new Response(child.stdout).text()
+        const stderr = await new Response(child.stderr).text()
+        const status = await child.exited
+        expect(stdout + stderr).not.toMatch(/private-|PRIVATE_VALUE|oldState|newState/)
+        if (input === JSON.stringify([change()])) {
+          expect(status).toBe(0)
+          expect(JSON.parse(stdout).changes[0].resource).toBe("worker-script")
+          expect(stderr).toBe("")
+          continue
+        }
+        expect(status).toBe(1)
+        expect(stdout).toBe("")
+        expect(stderr).toContain("private diff content was not printed")
+      }
+    } finally {
+      await unlink(file)
+    }
+  })
+})

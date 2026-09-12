@@ -1,0 +1,77 @@
+name: Audit dev usage queue deployment
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: cloudflare-deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
+  MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
+  MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true"
+  MONGOLGPT_ENABLE_ADMIN: "false"
+  MONGOLGPT_ENABLE_ANALYTICS: "false"
+  MONGOLGPT_ENABLE_D1_BACKUPS: "false"
+  MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS: "false"
+  MONGOLGPT_ENABLE_LEGACY_STRIPE: "false"
+  MONGOLGPT_ENABLE_MONITORING: "false"
+  MONGOLGPT_ENABLE_TURNSTILE: "true"
+  MONGOLGPT_ENABLE_SHARE_SERVICE: "false"
+  MONGOLGPT_ENABLE_SYNC_SERVICE: "false"
+  MONGOLGPT_ENABLE_REAL_PAYMENTS: "false"
+  MONGOLGPT_PAYMENT_ENVIRONMENT: disabled
+  MONGOLGPT_TURNSTILE_SITE_KEY: "1x00000000000000000000AA"
+
+jobs:
+  audit:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify private audit reporting
+        run: bun test --cwd packages/script test/usage-queue-deployment-audit.test.ts
+
+      - name: Preview existing dev queue worker updates without deploying
+        env:
+          CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_AUTH_EMAIL_DOMAINS: ${{ vars.MONGOLGPT_AUTH_EMAIL_DOMAINS }}
+          MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
+          SST_SECRET_ByokCredentialsKeyV1: ${{ secrets.BYOK_CREDENTIALS_KEY_V1 }}
+          SST_SECRET_D1BackupApiToken: "disabled"
+          SST_SECRET_GITHUB_CLIENT_ID_CONSOLE: ${{ vars.MONGOLGPT_GITHUB_OAUTH_CLIENT_ID }}
+          SST_SECRET_GITHUB_CLIENT_SECRET_CONSOLE: ${{ secrets.MONGOLGPT_GITHUB_OAUTH_CLIENT_SECRET }}
+          SST_SECRET_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          SST_SECRET_MONGOLGPT_PLAN_LIMITS: ${{ secrets.MONGOLGPT_PLAN_LIMITS }}
+          SST_SECRET_MongolGPTRuntimeAuthSecret: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
+          SST_SECRET_TurnstileSecretKey: "1x0000000000000000000000000000000AA"
+          SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: ${{ secrets.MONGOLGPT_GATEWAY_SESSION_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ "$CLOUDFLARE_ACCOUNT_ID" != "cc97ad90bfaf8a1da5de612eef2658f5" ]; then
+            echo "Unexpected Cloudflare dev account."
+            exit 1
+          fi
+          umask 077
+          diff_file="$(mktemp "$RUNNER_TEMP/mongolgpt-usage-diff.XXXXXX")"
+          stderr_file="$(mktemp "$RUNNER_TEMP/mongolgpt-usage-stderr.XXXXXX")"
+          trap 'rm -f "$diff_file" "$stderr_file"' EXIT
+          if ! bun sst diff --stage=dev --target UsageQueueSubscriber,UsageQueueHeartbeat --json --print-logs >"$diff_file" 2>"$stderr_file"; then
+            bun script/sst-error-diagnostics.ts .sst/pulumi "$stderr_file" "$diff_file" .sst/log/sst.log .sst/log/pulumi.log .sst/log/pulumi.err.log
+            exit 1
+          fi
+          bun script/audit-usage-queue-deployment.ts "$diff_file"
