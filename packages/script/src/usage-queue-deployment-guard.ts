@@ -43,11 +43,36 @@ const comparableStateFields = [
   "taint",
   "initErrors",
   "hideDiffs",
-]
+] as const
+
+type RejectionReason =
+  | "unapproved-resource"
+  | "invalid-preview"
+  | "invalid-entry"
+  | "wrong-resource-scope"
+  | "duplicate-resource"
+  | "opaque-worker-inputs"
+  | "wrong-worker-account"
+  | "wrong-worker-name"
+  | "missing-worker-content"
+  | "invalid-worker-hash"
+  | "changed-worker-bindings-or-settings"
+  | "wrong-url-account"
+  | "wrong-url-worker"
+  | "changed-url-enabled"
+  | "invalid-url-etag"
+  | "unchanged-url-etag"
+  | "opaque-url-inputs"
+  | "changed-url-settings"
+  | "missing-state"
+  | "conflicting-state-identity"
+  | "missing-state-inputs"
+  | `opaque-state-${(typeof comparableStateFields)[number]}`
+  | `changed-state-${(typeof comparableStateFields)[number]}`
 
 export class UsageQueueDeploymentGuardError extends Error {
-  constructor(message = "Usage queue deployment preview is not approved") {
-    super(message)
+  constructor(readonly reason: RejectionReason = "unapproved-resource") {
+    super("Usage queue deployment preview is not approved")
     this.name = "UsageQueueDeploymentGuardError"
   }
 }
@@ -58,7 +83,7 @@ export interface UsageQueueDeploymentGuardSummary {
 }
 
 export function verifyUsageQueueDeploymentDiff(value: unknown): UsageQueueDeploymentGuardSummary {
-  if (!Array.isArray(value) || value.length > maximumEntries) reject()
+  if (!Array.isArray(value) || value.length > maximumEntries) reject("invalid-preview")
 
   const seen = new Set<string>()
   let workerUpdates = 0
@@ -69,11 +94,12 @@ export function verifyUsageQueueDeploymentDiff(value: unknown): UsageQueueDeploy
     const urn = text(entry?.urn)
     const type = text(entry?.type)
     const op = text(entry?.op)
-    if (!entry || !urn || !type || !op || !allowedOperations.has(op)) reject()
+    if (!entry || !urn || !type || !op || !allowedOperations.has(op)) reject("invalid-entry")
 
     const parsed = parseUrn(urn)
-    if (parsed.stack !== stack || parsed.type.split("$").at(-1) !== type || parsed.name.length === 0) reject()
-    if (seen.has(urn)) reject()
+    if (parsed.stack !== stack || parsed.type.split("$").at(-1) !== type || parsed.name.length === 0)
+      reject("wrong-resource-scope")
+    if (seen.has(urn)) reject("duplicate-resource")
     seen.add(urn)
 
     if (op === "same") continue
@@ -102,53 +128,55 @@ export function verifyUsageQueueDeploymentDiff(value: unknown): UsageQueueDeploy
 
 function assertWorkerUpdate(entry: Record<string, unknown>, urn: string, type: string, expectedScriptName: string) {
   const { oldInputs, newInputs } = stateInputs(entry, urn, type)
-  if (hasOpaqueValue(oldInputs) || hasOpaqueValue(newInputs)) reject()
-  if (oldInputs.accountId !== accountId || newInputs.accountId !== accountId) reject()
-  if (oldInputs.scriptName !== expectedScriptName || newInputs.scriptName !== expectedScriptName) reject()
+  if (hasOpaqueValue(oldInputs) || hasOpaqueValue(newInputs)) reject("opaque-worker-inputs")
+  if (oldInputs.accountId !== accountId || newInputs.accountId !== accountId) reject("wrong-worker-account")
+  if (oldInputs.scriptName !== expectedScriptName || newInputs.scriptName !== expectedScriptName)
+    reject("wrong-worker-name")
 
   const oldContentFile = text(oldInputs.contentFile)
   const newContentFile = text(newInputs.contentFile)
   const oldHash = text(oldInputs.contentSha256)
   const newHash = text(newInputs.contentSha256)
-  if (!oldContentFile || !newContentFile || !oldHash || !newHash) reject()
-  if (!hashPattern.test(newHash) || oldHash === newHash) reject()
+  if (!oldContentFile || !newContentFile || !oldHash || !newHash) reject("missing-worker-content")
+  if (!hashPattern.test(newHash) || oldHash === newHash) reject("invalid-worker-hash")
 
   const oldStable = omit(oldInputs, ["contentFile", "contentSha256"])
   const newStable = omit(newInputs, ["contentFile", "contentSha256"])
-  if (!isDeepStrictEqual(oldStable, newStable)) reject()
+  if (!isDeepStrictEqual(oldStable, newStable)) reject("changed-worker-bindings-or-settings")
 }
 
 function assertWorkerUrlUpdate(entry: Record<string, unknown>, urn: string, type: string, expectedScriptName: string) {
   const { oldInputs, newInputs } = stateInputs(entry, urn, type)
-  if (oldInputs.accountId !== accountId || newInputs.accountId !== accountId) reject()
-  if (oldInputs.scriptName !== expectedScriptName || newInputs.scriptName !== expectedScriptName) reject()
-  if (typeof oldInputs.enabled !== "boolean" || oldInputs.enabled !== newInputs.enabled) reject()
-  if (!etag(oldInputs.etag) || !etag(newInputs.etag)) reject()
-  if (oldInputs.etag === newInputs.etag) reject()
+  if (oldInputs.accountId !== accountId || newInputs.accountId !== accountId) reject("wrong-url-account")
+  if (oldInputs.scriptName !== expectedScriptName || newInputs.scriptName !== expectedScriptName)
+    reject("wrong-url-worker")
+  if (typeof oldInputs.enabled !== "boolean" || oldInputs.enabled !== newInputs.enabled) reject("changed-url-enabled")
+  if (!etag(oldInputs.etag) || !etag(newInputs.etag)) reject("invalid-url-etag")
+  if (oldInputs.etag === newInputs.etag) reject("unchanged-url-etag")
 
   const oldStable = omit(oldInputs, ["etag"])
   const newStable = omit(newInputs, ["etag"])
-  if (hasOpaqueValue(oldStable) || hasOpaqueValue(newStable)) reject()
-  if (!isDeepStrictEqual(oldStable, newStable)) reject()
+  if (hasOpaqueValue(oldStable) || hasOpaqueValue(newStable)) reject("opaque-url-inputs")
+  if (!isDeepStrictEqual(oldStable, newStable)) reject("changed-url-settings")
 }
 
 function stateInputs(entry: Record<string, unknown>, urn: string, type: string) {
   // SST 4.17.1 emits Pulumi 3.215.0 StepEventMetadata verbatim as old/new.
   const oldState = record(entry.old)
   const newState = record(entry.new)
-  if (!oldState || !newState) reject()
-  if (oldState.urn !== undefined && oldState.urn !== urn) reject()
-  if (newState.urn !== undefined && newState.urn !== urn) reject()
-  if (oldState.type !== undefined && oldState.type !== type) reject()
-  if (newState.type !== undefined && newState.type !== type) reject()
+  if (!oldState || !newState) reject("missing-state")
+  if (oldState.urn !== undefined && oldState.urn !== urn) reject("conflicting-state-identity")
+  if (newState.urn !== undefined && newState.urn !== urn) reject("conflicting-state-identity")
+  if (oldState.type !== undefined && oldState.type !== type) reject("conflicting-state-identity")
+  if (newState.type !== undefined && newState.type !== type) reject("conflicting-state-identity")
   for (const key of comparableStateFields) {
-    if (hasOpaqueValue(oldState[key]) || hasOpaqueValue(newState[key])) reject()
-    if (!isDeepStrictEqual(oldState[key], newState[key])) reject()
+    if (hasOpaqueValue(oldState[key]) || hasOpaqueValue(newState[key])) reject(`opaque-state-${key}`)
+    if (!isDeepStrictEqual(oldState[key], newState[key])) reject(`changed-state-${key}`)
   }
 
   const oldInputs = record(oldState.inputs)
   const newInputs = record(newState.inputs)
-  if (!oldInputs || !newInputs) reject()
+  if (!oldInputs || !newInputs) reject("missing-state-inputs")
   return { oldInputs, newInputs }
 }
 
@@ -157,7 +185,7 @@ function parseUrn(urn: string) {
   const prefix = parts.slice(0, 2).join("::")
   const type = parts.at(-2)
   const name = parts.at(-1)
-  if (parts.length !== 4 || !type || !name) reject()
+  if (parts.length !== 4 || !type || !name) reject("wrong-resource-scope")
   return { stack: prefix, type, name }
 }
 
@@ -194,6 +222,6 @@ function record(value: unknown): Record<string, unknown> | undefined {
     : undefined
 }
 
-function reject(): never {
-  throw new UsageQueueDeploymentGuardError()
+function reject(reason?: RejectionReason): never {
+  throw new UsageQueueDeploymentGuardError(reason)
 }

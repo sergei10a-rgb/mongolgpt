@@ -26,7 +26,10 @@ describe("dev usage queue deployment audit", () => {
       operation: "update",
       resource: "worker-script",
       sameResourceAs: null,
+      identicalPreviousEvent: null,
       allowedIndividually: false,
+      rejectionReason: "wrong-worker-account",
+      metadataEvidence: null,
       fields: ["content", "textBindings"],
       detailedDiffAvailable: true,
       inputComparisonAvailable: true,
@@ -119,8 +122,60 @@ describe("dev usage queue deployment audit", () => {
       allowedIndividually: false,
     })
     expect(report.changes[1]).toMatchObject({ resource: "link-reference", sameResourceAs: null })
-    expect(report.changes[2]).toMatchObject({ sameResourceAs: 1, allowedIndividually: false })
+    expect(report.changes[2]).toMatchObject({
+      sameResourceAs: 1,
+      identicalPreviousEvent: true,
+      allowedIndividually: false,
+    })
     expect(JSON.stringify(report)).not.toContain("private-")
+  })
+
+  test("describes engine metadata and computed links without allowing them or exposing values", () => {
+    const provider = {
+      ...change(),
+      type: "pulumi:providers:pulumi-nodejs",
+      urn: "urn:pulumi:dev::mongolgpt::pulumi:providers:pulumi-nodejs::private-provider",
+      old: { inputs: {} },
+      new: { inputs: { __internal: {} } },
+    }
+    const reference = {
+      ...change(),
+      type: "sst:sst:LinkRef",
+      urn: "urn:pulumi:dev::mongolgpt::sst:sst:LinkRef::UsageQueueHeartbeatHandlerLinkRef",
+      old: { inputs: { properties: { url: "https://private-url" }, include: "private-binding" } },
+      new: {
+        inputs: { properties: { url: "04da6b54-80e4-46f7-96ec-b56ff0331ba9" }, include: "private-binding" },
+      },
+    }
+    const report = summarizeUsageQueueDeploymentDiff([
+      provider,
+      {
+        ...provider,
+        new: { inputs: { __internal: { pluginDownloadURL: "private-plugin", "private-key": "secret" } } },
+      },
+      reference,
+      { ...reference, new: { inputs: { ...reference.new.inputs, properties: { url: "private-concrete-change" } } } },
+    ])
+    expect(report.changes[0]).toMatchObject({
+      changedInputFields: ["__internal"],
+      rejectionReason: "unapproved-resource",
+      metadataEvidence: { emptyInternalMetadataAdded: true, changedInternalFields: [] },
+    })
+    expect(report.changes[1]).toMatchObject({
+      identicalPreviousEvent: false,
+      metadataEvidence: { emptyInternalMetadataAdded: false, changedInternalFields: ["other", "pluginDownloadURL"] },
+    })
+    expect(report.changes[2].metadataEvidence).toEqual({
+      onlyUrlPropertyChanged: true,
+      newUrlIsComputed: true,
+      includeUnchanged: true,
+    })
+    expect(report.changes[3]).toMatchObject({
+      identicalPreviousEvent: false,
+      metadataEvidence: { newUrlIsComputed: false },
+    })
+    expect(report.changes.every((item) => !item.allowedIndividually)).toBe(true)
+    expect(JSON.stringify(report)).not.toMatch(/private-|secret|04da6b54/)
   })
 
   test("rejects malformed metadata, wrong account stack or stage, and oversized arrays", () => {

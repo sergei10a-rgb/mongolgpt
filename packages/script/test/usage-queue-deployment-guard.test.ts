@@ -164,9 +164,34 @@ describe("usage queue deployment guard", () => {
       verifyUsageQueueDeploymentDiff([entry])
     } catch (error) {
       expect(String(error)).not.toContain(privateValue)
+      expect(JSON.stringify(error)).not.toContain(privateValue)
+      expect(error instanceof UsageQueueDeploymentGuardError ? error.reason : null).toBe(
+        "changed-worker-bindings-or-settings",
+      )
       expect(error instanceof Error ? error.message : String(error)).toBe(
         "Usage queue deployment preview is not approved",
       )
+    }
+  })
+
+  test("reports fixed failure reasons without changing approval decisions or revealing values", () => {
+    const cases = [
+      [worker("UsageQueueSubscriberFunctionScript", { omitOldState: true }), "missing-state"],
+      [worker("UsageQueueSubscriberFunctionScript", { omitInputs: true }), "missing-state-inputs"],
+      [worker("UsageQueueSubscriberFunctionScript", { opaque: true }), "opaque-worker-inputs"],
+      [worker("UsageQueueSubscriberFunctionScript", { deleteInput: "contentFile" }), "missing-worker-content"],
+      [worker("UsageQueueSubscriberFunctionScript", { newContentSha256: privateValue }), "invalid-worker-hash"],
+      [worker("UsageQueueSubscriberFunctionScript", { newStatePatch: { id: privateValue } }), "changed-state-id"],
+      [mutating("pulumi:providers:pulumi-nodejs", "private-provider", "update"), "unapproved-resource"],
+    ] as const
+    for (const [entry, reason] of cases) {
+      expect(() => verifyUsageQueueDeploymentDiff([entry])).toThrow(UsageQueueDeploymentGuardError)
+      try {
+        verifyUsageQueueDeploymentDiff([entry])
+      } catch (error) {
+        expect(error instanceof UsageQueueDeploymentGuardError ? error.reason : null).toBe(reason)
+        expect(JSON.stringify(error)).not.toContain(privateValue)
+      }
     }
   })
 })
