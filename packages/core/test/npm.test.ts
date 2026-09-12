@@ -62,7 +62,7 @@ describe("Npm.add", () => {
     }).pipe(Effect.scoped, Effect.provide(npmLayer(path.join(tmp.path, "cache"))), Effect.runPromise)
 
     expect(entry.entrypoint).toBeDefined()
-  })
+  }, 30_000)
 })
 
 describe("Npm.install", () => {

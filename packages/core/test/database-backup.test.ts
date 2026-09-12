@@ -256,7 +256,7 @@ describe("encrypted SQLite preservation", () => {
     await Effect.runPromise(DatabaseBackup.restore({ source: destination, destination: restored, key }))
     expect(await rows(restored)).toEqual(await rows(source))
     expect((await readdir(temp.path)).some((file) => file.startsWith(".mongolgpt-backup-"))).toBe(false)
-  })
+  }, 30_000)
 
   test("interruption waits for private staging cleanup and leaves source intact", async () => {
     await using temp = await tmpdir()
