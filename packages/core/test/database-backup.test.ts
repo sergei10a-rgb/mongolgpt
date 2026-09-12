@@ -258,6 +258,7 @@ describe("encrypted SQLite preservation", () => {
     expect((await readdir(temp.path)).some((file) => file.startsWith(".mongolgpt-backup-"))).toBe(false)
   }, 30_000)
 
+  // The five-second staging wait needs a separate outer budget for Windows ACL cleanup.
   test("interruption waits for private staging cleanup and leaves source intact", async () => {
     await using temp = await tmpdir()
     const source = join(temp.path, "source.sqlite")
@@ -288,7 +289,7 @@ describe("encrypted SQLite preservation", () => {
     expect(await readdir(temp.path)).not.toContain("archive")
     expect(await readFile(source)).toEqual(before)
     expect((await rows(source)).interrupt_fixture).toHaveLength(1)
-  })
+  }, 30_000)
 
   test("rejects invalid keys and foreign-key violations without mutating source or exposing raw data", async () => {
     await using temp = await tmpdir()
