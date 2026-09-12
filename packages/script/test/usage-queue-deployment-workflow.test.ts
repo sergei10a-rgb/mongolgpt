@@ -24,6 +24,7 @@ test("queue deployment is manual, serialized and guarded before its fixed-target
   )
   expect(workflow.env.MONGOLGPT_ENABLE_REAL_PAYMENTS).toBe("false")
   expect(workflow.env.MONGOLGPT_ENABLE_ADMIN).toBe("false")
+  expect(workflow.env.PULUMI_TF_BRIDGE_ACCURATE_PF_BRIDGE_PREVIEW).toBe("true")
   const commands = workflow.jobs.deploy.steps.map((step) => step.run ?? "").join("\n")
   expect(commands).toContain('"$DEPLOY_CONFIRMATION" != "DEPLOY DEV USAGE QUEUE"')
   expect(commands).toContain('"$CLOUDFLARE_ACCOUNT_ID" != "cc97ad90bfaf8a1da5de612eef2658f5"')

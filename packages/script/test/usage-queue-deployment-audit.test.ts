@@ -36,6 +36,11 @@ describe("dev usage queue deployment audit", () => {
         unknownEngineFieldCount: 0,
         replacementMetadataKind: "absent",
         replacementFields: [],
+        detailedChanges: [
+          { field: "content", kind: "update", inputDiff: null },
+          { field: "textBindings", kind: "update", inputDiff: null },
+        ],
+        unrecognizedDetailedKindCount: 0,
         detailedInputFields: [],
       },
       opaqueInputFields: [],
@@ -290,6 +295,12 @@ describe("dev usage queue deployment audit", () => {
       unknownEngineFieldCount: 2,
       replacementMetadataKind: "array",
       replacementFields: ["limits", "other"],
+      detailedChanges: [
+        { field: "limits", kind: "other", inputDiff: true },
+        { field: "other", kind: "other", inputDiff: true },
+        { field: "etag", kind: "other", inputDiff: false },
+      ],
+      unrecognizedDetailedKindCount: 3,
       detailedInputFields: ["limits", "other"],
     })
     expect(report.changes[0].allowedIndividually).toBe(false)
@@ -359,6 +370,30 @@ describe("dev usage queue deployment audit", () => {
     expect(JSON.stringify(report)).not.toMatch(/private-|4dabf181|1b470612|aaaaaa|bbbbbb/)
   })
 
+  test("reports detailed replacement kinds without leaking unknown kinds or nested paths", () => {
+    const report = summarizeUsageQueueDeploymentDiff([
+      {
+        ...change(),
+        keys: [],
+        detailedDiff: {
+          etag: { diffKind: "update", inputDiff: false },
+          "etag.private-child": { diffKind: "update-replace", inputDiff: false },
+          "bindings.private-name": { diffKind: "add", inputDiff: true },
+          "private-field": { diffKind: "private-kind", inputDiff: "private-boolean" },
+          "private-other": "private-value",
+        },
+      },
+    ])
+    expect(report.changes[0].workerDiffEvidence?.detailedChanges).toEqual([
+      { field: "etag", kind: "update", inputDiff: false },
+      { field: "etag", kind: "update-replace", inputDiff: false },
+      { field: "bindings", kind: "add", inputDiff: true },
+      { field: "other", kind: "other", inputDiff: null },
+    ])
+    expect(report.changes[0].workerDiffEvidence?.unrecognizedDetailedKindCount).toBe(2)
+    expect(JSON.stringify(report)).not.toContain("private-")
+  })
+
   test("rejects malformed metadata, wrong account stack or stage, and oversized arrays", () => {
     for (const invalid of [
       null,
@@ -382,11 +417,13 @@ describe("dev usage queue deployment audit", () => {
       on: unknown
       permissions: unknown
       concurrency: unknown
+      env: Record<string, string>
       jobs: { audit: { environment: string; if: string; steps: Array<{ run?: string }> } }
     }
     expect(workflow.on).toEqual({ workflow_dispatch: null })
     expect(workflow.permissions).toEqual({ contents: "read" })
     expect(workflow.concurrency).toEqual({ group: "cloudflare-deploy-dev", "cancel-in-progress": false })
+    expect(workflow.env.PULUMI_TF_BRIDGE_ACCURATE_PF_BRIDGE_PREVIEW).toBe("true")
     expect(workflow.jobs.audit.environment).toBe("dev")
     expect(workflow.jobs.audit.if).toContain("github.repository == 'sergei10a-rgb/mongolgpt'")
     expect(workflow.jobs.audit.if).toContain("github.ref == 'refs/heads/main'")

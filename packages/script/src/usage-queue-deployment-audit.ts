@@ -75,6 +75,7 @@ const fields = new Set([
 
 // Pulumi 3.215.0 providers/registry.go reserves these engine metadata fields.
 const internalFields = new Set(["name", "version", "pluginDownloadURL", "pluginChecksums", "parameterization"])
+const changeKinds = new Set(["add", "add-replace", "delete", "delete-replace", "update", "update-replace"])
 const pulumiSignatureProperty = "4dabf18193072939515e22adb298388d"
 const pulumiHiddenValueSignature = "1b47061264138c4ac30d75fd1eb44270"
 const pulumiAssetSignature = "c44067f5952c0a294b673a41bacd8c17"
@@ -173,6 +174,16 @@ function workerDiffEvidence(
 ) {
   const diffs = Array.isArray(entry.diffs) ? entry.diffs : []
   const known = [...new Set(diffs.filter((key): key is string => typeof key === "string" && fields.has(key)))].sort()
+  const details = Object.entries(record(entry.detailedDiff) ?? {})
+  const detailedChanges = details.map(([path, value]) => {
+    const root = path.split(/[.\[]/, 1)[0]
+    const item = record(value)
+    return {
+      field: fields.has(root) ? root : "other",
+      kind: typeof item?.diffKind === "string" && changeKinds.has(item.diffKind) ? item.diffKind : "other",
+      inputDiff: typeof item?.inputDiff === "boolean" ? item.inputDiff : null,
+    }
+  })
   return {
     inputPresence: known.map((field) => ({
       field,
@@ -184,9 +195,11 @@ function workerDiffEvidence(
     replacementFields: Array.isArray(entry.keys)
       ? [...new Set(entry.keys.map((key) => (typeof key === "string" && fields.has(key) ? key : "other")))].sort()
       : [],
+    detailedChanges: [...new Map(detailedChanges.map((change) => [JSON.stringify(change), change])).values()],
+    unrecognizedDetailedKindCount: detailedChanges.filter((change) => change.kind === "other").length,
     detailedInputFields: [
       ...new Set(
-        Object.entries(record(entry.detailedDiff) ?? {})
+        details
           .filter(([, value]) => record(value)?.inputDiff === true)
           .map(([path]) => {
             const root = path.split(/[.\[]/, 1)[0]
