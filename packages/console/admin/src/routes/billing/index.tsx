@@ -40,10 +40,7 @@ export default function AdminBillingPage() {
             </main>
           }
         >
-          {(data) => {
-            const [report, recoveries] = data()
-            return <AdminBillingView data={report} recoveries={recoveries} />
-          }}
+          {(data) => <AdminBillingView data={data()[0]} recoveries={data()[1]} />}
         </Show>
       </ErrorBoundary>
     </>

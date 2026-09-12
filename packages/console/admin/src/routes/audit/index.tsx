@@ -66,17 +66,29 @@ export default function AdminAuditPage() {
                 <label>
                   <span>Үр дүн</span>
                   <select name="outcome" value={data().filters.outcome}>
-                    <option value="all">Бүх үр дүн</option>
-                    <option value="success">Амжилттай</option>
-                    <option value="denied">Татгалзсан</option>
-                    <option value="failure">Алдаатай</option>
+                    <option value="all" selected={data().filters.outcome === "all"}>
+                      Бүх үр дүн
+                    </option>
+                    <option value="success" selected={data().filters.outcome === "success"}>
+                      Амжилттай
+                    </option>
+                    <option value="denied" selected={data().filters.outcome === "denied"}>
+                      Татгалзсан
+                    </option>
+                    <option value="failure" selected={data().filters.outcome === "failure"}>
+                      Алдаатай
+                    </option>
                   </select>
                 </label>
                 <label>
                   <span>Хуудасны хэмжээ</span>
                   <select name="limit" value={String(data().filters.limit)}>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
+                    <option value="25" selected={data().filters.limit === 25}>
+                      25
+                    </option>
+                    <option value="50" selected={data().filters.limit === 50}>
+                      50
+                    </option>
                   </select>
                 </label>
                 <button type="submit">Хайх</button>

@@ -140,28 +140,6 @@ main[data-page="admin-support"] {
   padding: 40px 0 64px;
 }
 
-@media (max-width: 620px) {
-  main[data-page="admin-support"] {
-    width: calc(100% - 28px);
-    padding-top: 28px;
-  }
-  [data-component="support-filters"],
-  [data-component="support-detail"] dl,
-  [data-component="support-actions"] > form,
-  [data-component="support-composer-grid"] {
-    grid-template-columns: 1fr;
-  }
-  [data-component="support-filters"] button {
-    grid-column: auto;
-    width: 100%;
-  }
-  [data-component="support-thread"] li > div {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
-  }
-}
-
 main[data-page="admin-plans"] {
   width: min(1240px, calc(100% - 48px));
   margin: 0 auto;
@@ -1652,6 +1630,29 @@ td[data-workspace] small {
 }
 
 @media (max-width: 620px) {
+  main[data-page="admin-support"] {
+    width: calc(100% - 28px);
+    padding-top: 28px;
+  }
+
+  [data-component="support-filters"],
+  [data-component="support-detail"] dl,
+  [data-component="support-actions"] > form,
+  [data-component="support-composer-grid"] {
+    grid-template-columns: 1fr;
+  }
+
+  [data-component="support-filters"] button {
+    grid-column: auto;
+    width: 100%;
+  }
+
+  [data-component="support-thread"] li > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
   [data-component="recovery-detail-grid"] {
     grid-template-columns: 1fr;
   }

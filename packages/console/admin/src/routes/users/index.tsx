@@ -81,16 +81,26 @@ export default function AdminUsersPage() {
                 <label>
                   <span>Төлөв</span>
                   <select name="status" value={data().filters.status}>
-                    <option value="all">Бүх төлөв</option>
-                    <option value="active">Идэвхтэй</option>
-                    <option value="suspended">Түдгэлзсэн</option>
+                    <option value="all" selected={data().filters.status === "all"}>
+                      Бүх төлөв
+                    </option>
+                    <option value="active" selected={data().filters.status === "active"}>
+                      Идэвхтэй
+                    </option>
+                    <option value="suspended" selected={data().filters.status === "suspended"}>
+                      Түдгэлзсэн
+                    </option>
                   </select>
                 </label>
                 <label>
                   <span>Хуудасны хэмжээ</span>
                   <select name="limit" value={String(data().filters.limit)}>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
+                    <option value="25" selected={data().filters.limit === 25}>
+                      25
+                    </option>
+                    <option value="50" selected={data().filters.limit === 50}>
+                      50
+                    </option>
                   </select>
                 </label>
                 <button type="submit">Хайх</button>

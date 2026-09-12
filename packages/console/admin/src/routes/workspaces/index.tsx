@@ -66,8 +66,12 @@ export default function AdminWorkspacesPage() {
                 <label>
                   <span>Хуудасны хэмжээ</span>
                   <select name="limit" value={String(data().filters.limit)}>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
+                    <option value="25" selected={data().filters.limit === 25}>
+                      25
+                    </option>
+                    <option value="50" selected={data().filters.limit === 50}>
+                      50
+                    </option>
                   </select>
                 </label>
                 <Show when={data().filters.workspace}>

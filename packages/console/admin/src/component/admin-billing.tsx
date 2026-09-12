@@ -181,30 +181,58 @@ export function AdminBillingView(props: { data: AdminBillingData; recoveries: Ad
           <label>
             <span>Хугацаа</span>
             <select name="period" value={props.data.filters.period}>
-              <option value="7d">Сүүлийн 7 хоног</option>
-              <option value="30d">Сүүлийн 30 хоног</option>
-              <option value="90d">Сүүлийн 90 хоног</option>
+              <option value="7d" selected={props.data.filters.period === "7d"}>
+                Сүүлийн 7 хоног
+              </option>
+              <option value="30d" selected={props.data.filters.period === "30d"}>
+                Сүүлийн 30 хоног
+              </option>
+              <option value="90d" selected={props.data.filters.period === "90d"}>
+                Сүүлийн 90 хоног
+              </option>
             </select>
           </label>
           <label>
             <span>Төлбөрийн суваг</span>
             <select name="provider" value={props.data.filters.provider}>
-              <option value="all">Бүх суваг</option>
-              <option value="qpay">QPay</option>
-              <option value="bonum">Bonum</option>
+              <option value="all" selected={props.data.filters.provider === "all"}>
+                Бүх суваг
+              </option>
+              <option value="qpay" selected={props.data.filters.provider === "qpay"}>
+                QPay
+              </option>
+              <option value="bonum" selected={props.data.filters.provider === "bonum"}>
+                Bonum
+              </option>
             </select>
           </label>
           <label>
             <span>Нэхэмжлэхийн төлөв</span>
             <select name="status" value={props.data.filters.status}>
-              <option value="all">Бүх төлөв</option>
-              <option value="created">Үүссэн</option>
-              <option value="pending">Хүлээгдэж буй</option>
-              <option value="paid">Төлөгдсөн</option>
-              <option value="failed">Амжилтгүй</option>
-              <option value="expired">Хугацаа дууссан</option>
-              <option value="cancelled">Цуцлагдсан</option>
-              <option value="refunded">Буцаасан</option>
+              <option value="all" selected={props.data.filters.status === "all"}>
+                Бүх төлөв
+              </option>
+              <option value="created" selected={props.data.filters.status === "created"}>
+                Үүссэн
+              </option>
+              <option value="pending" selected={props.data.filters.status === "pending"}>
+                Хүлээгдэж буй
+              </option>
+              <option value="paid" selected={props.data.filters.status === "paid"}>
+                Төлөгдсөн
+              </option>
+              <option value="failed" selected={props.data.filters.status === "failed"}>
+                Амжилтгүй
+              </option>
+              <option value="expired" selected={props.data.filters.status === "expired"}>
+                Хугацаа дууссан
+              </option>
+              <option value="cancelled" selected={props.data.filters.status === "cancelled"}>
+                Цуцлагдсан
+              </option>
+              <option value="refunded" selected={props.data.filters.status === "refunded"}>
+                Буцаасан
+              </option>
             </select>
           </label>
           <button type="submit">Шүүх</button>

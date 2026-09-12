@@ -82,19 +82,19 @@ export default function AdminSupportPage() {
                   <label>
                     <span>Төлөв</span>
                     <select name="status" value={data().filters.status ?? "all"}>
-                      <StatusOptions all />
+                      <StatusOptions all value={data().filters.status ?? "all"} />
                     </select>
                   </label>
                   <label>
                     <span>Тэргүүлэх зэрэг</span>
                     <select name="priority" value={data().filters.priority ?? "all"}>
-                      <PriorityOptions all />
+                      <PriorityOptions all value={data().filters.priority ?? "all"} />
                     </select>
                   </label>
                   <label>
                     <span>Хариуцалт</span>
                     <select name="assignment" value={data().filters.assignment ?? "all"}>
-                      <AssignmentOptions all />
+                      <AssignmentOptions all value={data().filters.assignment ?? "all"} />
                     </select>
                   </label>
                   <label>
@@ -109,8 +109,12 @@ export default function AdminSupportPage() {
                   <label>
                     <span>Хуудасны хэмжээ</span>
                     <select name="limit" value={String(data().filters.limit)}>
-                      <option value="25">25</option>
-                      <option value="50">50</option>
+                      <option value="25" selected={data().filters.limit === 25}>
+                        25
+                      </option>
+                      <option value="50" selected={data().filters.limit === 50}>
+                        50
+                      </option>
                     </select>
                   </label>
                   <button type="submit">Шүүх</button>
@@ -209,7 +213,7 @@ function SupportError() {
     </main>
   )
 }
-export function StatusOptions(props: { all?: boolean; current?: string }) {
+export function StatusOptions(props: { all?: boolean; current?: string; value: string }) {
   const statuses = () => {
     const all = ["open", "pending_support", "pending_user", "resolved", "closed"]
     if (!props.current) return all
@@ -221,28 +225,58 @@ export function StatusOptions(props: { all?: boolean; current?: string }) {
   }
   return (
     <>
-      {props.all && <option value="all">Бүх төлөв</option>}
-      <For each={statuses()}>{(status) => <option value={status}>{statusLabel(status)}</option>}</For>
+      {props.all && (
+        <option value="all" selected={props.value === "all"}>
+          Бүх төлөв
+        </option>
+      )}
+      <For each={statuses()}>
+        {(status) => (
+          <option value={status} selected={props.value === status}>
+            {statusLabel(status)}
+          </option>
+        )}
+      </For>
     </>
   )
 }
-export function PriorityOptions(props: { all?: boolean }) {
+export function PriorityOptions(props: { all?: boolean; value: string }) {
   return (
     <>
-      {props.all && <option value="all">Бүх зэрэг</option>}
-      <option value="normal">Ердийн</option>
-      <option value="high">Өндөр</option>
-      <option value="urgent">Яаралтай</option>
+      {props.all && (
+        <option value="all" selected={props.value === "all"}>
+          Бүх зэрэг
+        </option>
+      )}
+      <option value="normal" selected={props.value === "normal"}>
+        Ердийн
+      </option>
+      <option value="high" selected={props.value === "high"}>
+        Өндөр
+      </option>
+      <option value="urgent" selected={props.value === "urgent"}>
+        Яаралтай
+      </option>
     </>
   )
 }
-export function AssignmentOptions(props: { all?: boolean }) {
+export function AssignmentOptions(props: { all?: boolean; value: string }) {
   return (
     <>
-      {props.all && <option value="all">Бүгд</option>}
-      <option value="assigned">Оноосон</option>
-      <option value="unassigned">Оноогоогүй</option>
-      <option value="mine">Надад оноосон</option>
+      {props.all && (
+        <option value="all" selected={props.value === "all"}>
+          Бүгд
+        </option>
+      )}
+      <option value="assigned" selected={props.value === "assigned"}>
+        Оноосон
+      </option>
+      <option value="unassigned" selected={props.value === "unassigned"}>
+        Оноогоогүй
+      </option>
+      <option value="mine" selected={props.value === "mine"}>
+        Надад оноосон
+      </option>
     </>
   )
 }

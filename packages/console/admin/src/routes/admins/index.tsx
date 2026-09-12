@@ -77,7 +77,7 @@ export default function AdminOperatorsPage() {
                   <label>
                     <span>Эрх</span>
                     <select name="role" required>
-                      <RoleOptions />
+                      <RoleOptions value="administrator" />
                     </select>
                   </label>
                   <button type="submit" disabled={submission.pending}>
@@ -148,7 +148,7 @@ export default function AdminOperatorsPage() {
                                       <input type="hidden" name="operatorID" value={operator.id} />
                                       <label for={`role-${operator.id}`}>Эрх</label>
                                       <select id={`role-${operator.id}`} name="role" value={operator.role} required>
-                                        <RoleOptions />
+                                        <RoleOptions value={operator.role} />
                                       </select>
                                       <button type="submit" disabled={submission.pending}>
                                         {submission.pending ? "Хадгалж байна..." : "Эрх хадгалах"}
@@ -192,13 +192,21 @@ export default function AdminOperatorsPage() {
   )
 }
 
-function RoleOptions() {
+function RoleOptions(props: { value: string }) {
   return (
     <>
-      <option value="administrator">Ерөнхий админ</option>
-      <option value="support">Хэрэглэгчийн тусламж</option>
-      <option value="finance">Санхүү</option>
-      <option value="operations">Системийн ажиллагаа</option>
+      <option value="administrator" selected={props.value === "administrator"}>
+        Ерөнхий админ
+      </option>
+      <option value="support" selected={props.value === "support"}>
+        Хэрэглэгчийн тусламж
+      </option>
+      <option value="finance" selected={props.value === "finance"}>
+        Санхүү
+      </option>
+      <option value="operations" selected={props.value === "operations"}>
+        Системийн ажиллагаа
+      </option>
     </>
   )
 }

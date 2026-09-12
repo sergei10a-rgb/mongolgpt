@@ -167,21 +167,27 @@ export default function AdminSupportTicketPage() {
                         <label>
                           <span>Төлөв</span>
                           <select name="status" value={current().status}>
-                            <StatusOptions current={current().status} />
+                            <StatusOptions current={current().status} value={current().status} />
                           </select>
                         </label>
                         <label>
                           <span>Тэргүүлэх зэрэг</span>
                           <select name="priority" value={current().priority}>
-                            <PriorityOptions />
+                            <PriorityOptions value={current().priority} />
                           </select>
                         </label>
                         <label>
                           <span>Хариуцсан админ</span>
                           <select name="assignedAdminID" value={current().assigned_admin_id ?? "__unassigned"}>
-                            <option value="__unassigned">Оноогоогүй</option>
+                            <option value="__unassigned" selected={!current().assigned_admin_id}>
+                              Оноогоогүй
+                            </option>
                             <For each={data().assignableAdmins}>
-                              {(admin) => <option value={admin.id}>{admin.email}</option>}
+                              {(admin) => (
+                                <option value={admin.id} selected={current().assigned_admin_id === admin.id}>
+                                  {admin.email}
+                                </option>
+                              )}
                             </For>
                           </select>
                         </label>
