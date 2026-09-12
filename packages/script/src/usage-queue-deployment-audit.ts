@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util"
+import { verifyUsageQueueDeploymentDiff } from "./usage-queue-deployment-guard"
 
 const targets = ["UsageQueueSubscriber", "UsageQueueHeartbeat"] as const
 const operations = new Set([
@@ -43,12 +44,19 @@ const fields = new Set([
   "enabled",
   "etag",
   "__provider",
+  "properties",
+  "include",
+  "apiToken",
+  "apiKey",
+  "email",
+  "pluginDownloadURL",
 ])
 
 // Report only bounded deployment metadata, never state inputs, outputs, or code.
 export function summarizeUsageQueueDeploymentDiff(value: unknown) {
   if (!Array.isArray(value) || value.length > 2_000) throw new Error("Invalid queue deployment diff")
-  const changes = value.map((raw) => {
+  const seen = new Map<string, number>()
+  const changes = value.map((raw, index) => {
     const entry = record(raw)
     if (!entry || typeof entry.urn !== "string" || typeof entry.type !== "string" || typeof entry.op !== "string") {
       throw new Error("Invalid queue deployment diff entry")
@@ -64,10 +72,14 @@ export function summarizeUsageQueueDeploymentDiff(value: unknown) {
     const detail = record(entry.detailedDiff)
     const oldInputs = record(record(entry.old)?.inputs)
     const newInputs = record(record(entry.new)?.inputs)
+    const sameResourceAs = seen.get(entry.urn) ?? null
+    seen.set(entry.urn, index)
     return {
       target,
       operation: entry.op,
       resource: resourceKind(entry.type, urn[3], target !== "outside-targets"),
+      sameResourceAs,
+      allowedIndividually: allowedIndividually(entry),
       fields: [
         ...new Set(
           Object.keys(detail ?? {}).map((path) => {
@@ -94,7 +106,12 @@ export function summarizeUsageQueueDeploymentDiff(value: unknown) {
 }
 
 function resourceKind(type: string, name: string, inTarget: boolean) {
-  if (type === "pulumi:pulumi:Stack" && name === "mongolgpt-dev") return "stack-metadata"
+  if (type === "pulumi:pulumi:Stack") return name === "mongolgpt-dev" ? "stack-metadata" : "other-stack-metadata"
+  if (type === "pulumi:providers:cloudflare") return "cloudflare-provider"
+  if (type === "pulumi:providers:random") return "random-provider"
+  if (type === "pulumi:providers:pulumi-nodejs") return "dynamic-provider"
+  if (type === "sst:sst:LinkRef") return "link-reference"
+  if (type === "sst:sst:Version") return "component-version"
   if (!inTarget) return "other"
   if (type === "pulumi-nodejs:dynamic:Resource") {
     if (
@@ -107,10 +124,19 @@ function resourceKind(type: string, name: string, inTarget: boolean) {
   if (type === "cloudflare:index/workersScript:WorkersScript") return "worker-script"
   if (type === "cloudflare:index/queueConsumer:QueueConsumer") return "queue-consumer"
   if (type === "cloudflare:index/workersCronTrigger:WorkersCronTrigger") return "cron-trigger"
-  if (type === "sst:sst:LinkRef") return "link-reference"
   if (["sst:cloudflare:Worker", "sst:cloudflare:Cron", "sst:cloudflare:QueueWorkerSubscriber"].includes(type))
     return "component"
   return "other"
+}
+
+function allowedIndividually(entry: unknown) {
+  // Diagnostic only: the complete preview must still pass the separate guard.
+  try {
+    verifyUsageQueueDeploymentDiff([entry])
+    return true
+  } catch {
+    return false
+  }
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {

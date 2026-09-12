@@ -25,6 +25,8 @@ describe("dev usage queue deployment audit", () => {
       target: "UsageQueueHeartbeat",
       operation: "update",
       resource: "worker-script",
+      sameResourceAs: null,
+      allowedIndividually: false,
       fields: ["content", "textBindings"],
       detailedDiffAvailable: true,
       inputComparisonAvailable: true,
@@ -91,6 +93,33 @@ describe("dev usage queue deployment audit", () => {
       changedInputFields: ["__provider", "bindings"],
     })
     expect(report.changes[1]).toMatchObject({ inputComparisonAvailable: false, changedInputFields: [] })
+    expect(JSON.stringify(report)).not.toContain("private-")
+  })
+
+  test("identifies provider drift and repeated resource events without exposing names or input values", () => {
+    const provider = {
+      ...change(),
+      type: "pulumi:providers:cloudflare",
+      urn: "urn:pulumi:dev::mongolgpt::pulumi:providers:cloudflare::private-provider-name",
+      detailedDiff: null,
+      old: { inputs: { apiToken: "private-old", version: "6.14.0" } },
+      new: { inputs: { apiToken: "private-new", version: "6.15.0" } },
+    }
+    const reference = {
+      ...change(),
+      type: "sst:sst:LinkRef",
+      urn: "urn:pulumi:dev::mongolgpt::sst:sst:LinkRef::UsageQueueHeartbeatHandlerLinkRef",
+      old: { inputs: { properties: { url: "private-old-url" } } },
+      new: { inputs: { properties: { url: "private-new-url" } } },
+    }
+    const report = summarizeUsageQueueDeploymentDiff([provider, reference, reference])
+    expect(report.changes[0]).toMatchObject({
+      resource: "cloudflare-provider",
+      changedInputFields: ["apiToken", "version"],
+      allowedIndividually: false,
+    })
+    expect(report.changes[1]).toMatchObject({ resource: "link-reference", sameResourceAs: null })
+    expect(report.changes[2]).toMatchObject({ sameResourceAs: 1, allowedIndividually: false })
     expect(JSON.stringify(report)).not.toContain("private-")
   })
 
