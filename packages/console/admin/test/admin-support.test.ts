@@ -26,15 +26,25 @@ function request(headers: HeadersInit = {}) {
 function dependencies(events: string[], audits: unknown[]): AdminSupportDependencies {
   const ticket = { id: ticketID, status: "pending_support", priority: "normal", assigned_admin_id: null }
   return {
-    transaction: (async (callback) => callback({} as never)) as AdminSupportDependencies["transaction"],
-    getAdminSupportTicketWithDb: (async () => ({ ticket, messages: [] })) as never,
-    mutateAdminSupportTicketWithDb: (async (_tx: unknown, input: { operation: string }) => {
+    batch: (async () => {
+      throw new Error("The core-operation mock owns this unit-test boundary")
+    }) as AdminSupportDependencies["batch"],
+    mutateAdminSupportTicket: async (input, options) => {
       events.push(`mutate:${input.operation}`)
-      return { id: ticketID, status: "pending_user", priority: "normal", assignedAdminID: null, lockVersion: 1 }
-    }) as never,
-    writeAdminAuditWithDb: (async (_tx: unknown, audit: unknown) => {
+      const result = {
+        id: ticketID,
+        status: "pending_user" as const,
+        priority: "normal" as const,
+        assignedAdminID: null,
+        lockVersion: 1,
+      }
+      options?.effect?.({} as never, { before: ticket as never, after: result })
+      return result
+    },
+    adminAuditQuery: ((_tx: unknown, audit: unknown) => {
       events.push("success-audit")
       audits.push(audit)
+      return {} as never
     }) as never,
     writeAdminAudit: (async (audit: unknown) => {
       events.push("failure-audit")
@@ -49,7 +59,7 @@ describe("admin support mutations", () => {
     expect(() => requirePlatformAdminPermission(reader, "support.manage")).toThrow("эрх хүрэлцэхгүй")
   })
 
-  test("binds the acting admin, mutates and audits atomically without customer message or email metadata", async () => {
+  test("binds the acting admin and success-audit effect without customer message or email metadata", async () => {
     const events: string[] = []
     const audits: unknown[] = []
     const result = await mutateAdminSupport(
@@ -102,10 +112,10 @@ describe("admin support mutations", () => {
     const events: string[] = []
     const audits: unknown[] = []
     const current = dependencies(events, audits)
-    current.writeAdminAuditWithDb = (async () => {
+    current.adminAuditQuery = (() => {
       events.push("success-audit")
       throw new Error("audit unavailable")
-    }) as AdminSupportDependencies["writeAdminAuditWithDb"]
+    }) as AdminSupportDependencies["adminAuditQuery"]
     const result = await mutateAdminSupport(
       manager,
       request(),

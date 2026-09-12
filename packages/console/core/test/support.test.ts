@@ -4,20 +4,26 @@ import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import { resolve } from "node:path"
 import {
   SupportError,
-  createSupportTicketWithDb,
+  createSupportTicket,
   getAccountSupportTicketWithDb,
   getAdminSupportTicketWithDb,
   listAdminSupportTicketsWithDb,
   listAccountSupportTicketsWithDb,
   redactSupportSecrets,
-  replyToSupportTicketWithDb,
-  mutateAdminSupportTicketWithDb,
+  replyToSupportTicket,
+  mutateAdminSupportTicket,
 } from "../src/support"
 import { Database } from "../src/drizzle"
 import * as schema from "../src/schema-d1"
+import { sqliteBatch } from "./fixtures/sqlite-batch"
 
 let sqlite: SQLite
 let db: Database.TxOrDb
+let batch: typeof Database.batch
+
+const create = (input: Parameters<typeof createSupportTicket>[0]) => createSupportTicket(input, { batch })
+const reply = (input: Parameters<typeof replyToSupportTicket>[0]) => replyToSupportTicket(input, { batch })
+const mutate = (input: Parameters<typeof mutateAdminSupportTicket>[0]) => mutateAdminSupportTicket(input, { batch })
 
 async function migrations() {
   const directory = resolve(import.meta.dir, "../migrations-d1")
@@ -35,7 +41,7 @@ async function ticket(
     message: string
   }> = {},
 ) {
-  return createSupportTicketWithDb(db, {
+  return create({
     accountID,
     requesterEmail: `${accountID}@mgpt.mn`,
     subject: overrides.subject ?? "Тусламж хэрэгтэй байна",
@@ -76,6 +82,17 @@ describe("Support core", () => {
     sqlite.exec(await migrations())
     const drizzleDb: SQLiteBunDatabase<typeof schema> = drizzle({ client: sqlite, schema })
     db = drizzleDb as unknown as Database.TxOrDb
+    batch = sqliteBatch(async (callback) => {
+      sqlite.exec("BEGIN IMMEDIATE")
+      try {
+        const result = await callback(db)
+        sqlite.exec("COMMIT")
+        return result
+      } catch (error) {
+        sqlite.exec("ROLLBACK")
+        throw error
+      }
+    })
     addAccount("acc_one")
     addAccount("acc_two")
   })
@@ -142,7 +159,7 @@ describe("Support core", () => {
 
   test("reply CAS, closed state, internal visibility, 200 cap болон trigger-ийг мөрдөнө", async () => {
     const created = await ticket()
-    const replied = await replyToSupportTicketWithDb(db, {
+    const replied = await reply({
       accountID: "acc_one",
       ticketID: created.id,
       message: "Дахин тайлбарлая.",
@@ -150,7 +167,7 @@ describe("Support core", () => {
     })
     expect(replied).toMatchObject({ status: "pending_support", lockVersion: 1 })
     await expect(
-      replyToSupportTicketWithDb(db, {
+      reply({
         accountID: "acc_one",
         ticketID: created.id,
         message: "Зэрэгцсэн хариу",
@@ -174,7 +191,7 @@ describe("Support core", () => {
       .query("update support_ticket set status = 'resolved', time_resolved = ?, time_updated = ? where id = ?")
       .run(Date.now(), Date.now(), created.id)
     await expect(
-      replyToSupportTicketWithDb(db, {
+      reply({
         accountID: "acc_one",
         ticketID: created.id,
         message: "Хаасан дараах",
@@ -192,7 +209,7 @@ describe("Support core", () => {
       (await getAccountSupportTicketWithDb(db, { accountID: "acc_one", ticketID: capped.id })).messages,
     ).toHaveLength(200)
     await expect(
-      replyToSupportTicketWithDb(db, {
+      reply({
         accountID: "acc_one",
         ticketID: capped.id,
         message: "Нэмэлт хариу",
@@ -216,7 +233,7 @@ describe("Support core", () => {
     const first = await ticket("acc_one")
     const second = await ticket("acc_two", { subject: "Өөр хүсэлт" })
     await expect(
-      mutateAdminSupportTicketWithDb(db, {
+      mutate({
         operation: "update",
         ticketID: first.id,
         expectedLockVersion: 0,
@@ -224,7 +241,7 @@ describe("Support core", () => {
         adminID: admin,
       }),
     ).rejects.toMatchObject({ code: "invalid" })
-    await mutateAdminSupportTicketWithDb(db, {
+    await mutate({
       operation: "update",
       ticketID: first.id,
       expectedLockVersion: 0,
@@ -244,7 +261,7 @@ describe("Support core", () => {
     await expect(listAdminSupportTicketsWithDb(db, { adminID: admin, cursor: "broken" })).rejects.toMatchObject({
       code: "invalid",
     })
-    const reply = await mutateAdminSupportTicketWithDb(db, {
+    const reply = await mutate({
       operation: "reply",
       ticketID: first.id,
       expectedLockVersion: 1,
@@ -252,7 +269,7 @@ describe("Support core", () => {
       adminID: admin,
     })
     expect(reply.status).toBe("pending_user")
-    const noted = await mutateAdminSupportTicketWithDb(db, {
+    const noted = await mutate({
       operation: "note",
       ticketID: first.id,
       expectedLockVersion: 2,
@@ -266,7 +283,7 @@ describe("Support core", () => {
     expect(detail.messages).toHaveLength(3)
     expect(detail.messages.at(-1)?.internal).toBe(true)
     await expect(
-      mutateAdminSupportTicketWithDb(db, {
+      mutate({
         operation: "update",
         ticketID: first.id,
         expectedLockVersion: 2,
@@ -274,7 +291,7 @@ describe("Support core", () => {
         adminID: admin,
       }),
     ).rejects.toMatchObject({ code: "conflict" })
-    const resolved = await mutateAdminSupportTicketWithDb(db, {
+    const resolved = await mutate({
       operation: "update",
       ticketID: first.id,
       expectedLockVersion: noted.lockVersion,
@@ -286,7 +303,7 @@ describe("Support core", () => {
       sqlite.query("select time_resolved, time_closed from support_ticket where id = ?").get(first.id),
     ).toMatchObject({ time_resolved: expect.any(Number), time_closed: null })
     await expect(
-      mutateAdminSupportTicketWithDb(db, {
+      mutate({
         operation: "reply",
         ticketID: first.id,
         expectedLockVersion: resolved.lockVersion,
@@ -294,7 +311,7 @@ describe("Support core", () => {
         adminID: admin,
       }),
     ).rejects.toMatchObject({ code: "closed" })
-    const closed = await mutateAdminSupportTicketWithDb(db, {
+    const closed = await mutate({
       operation: "update",
       ticketID: first.id,
       expectedLockVersion: resolved.lockVersion,
@@ -306,7 +323,7 @@ describe("Support core", () => {
       sqlite.query("select time_resolved, time_closed from support_ticket where id = ?").get(first.id),
     ).toMatchObject({ time_resolved: expect.any(Number), time_closed: expect.any(Number) })
     await expect(
-      mutateAdminSupportTicketWithDb(db, {
+      mutate({
         operation: "update",
         ticketID: second.id,
         expectedLockVersion: 0,
@@ -321,7 +338,7 @@ describe("Support core", () => {
         )
         .run(`spm_${String(index).padStart(26, "C")}`, second.id, admin, `Тэмдэглэл ${index}`, Date.now() + index)
     await expect(
-      mutateAdminSupportTicketWithDb(db, {
+      mutate({
         operation: "note",
         ticketID: second.id,
         expectedLockVersion: 0,

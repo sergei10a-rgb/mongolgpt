@@ -5,18 +5,13 @@ import {
   SupportError,
   getAdminSupportTicketWithDb,
   listAdminSupportTicketsWithDb,
-  mutateAdminSupportTicketWithDb,
+  mutateAdminSupportTicket,
 } from "@mongolgpt/console-core/support.js"
 import { hasPlatformAdminPermission } from "@mongolgpt/console-core/platform-admin.js"
 import { PlatformAdminTable } from "@mongolgpt/console-core/schema/admin.sql.js"
 import { z } from "zod"
 import type { PlatformAdminContext } from "./admin-context"
-import {
-  AdminAuthorizationError,
-  requirePlatformAdminPermission,
-  writeAdminAudit,
-  writeAdminAuditWithDb,
-} from "./admin-auth"
+import { AdminAuthorizationError, requirePlatformAdminPermission, writeAdminAudit, adminAuditQuery } from "./admin-auth"
 import { AdminMutationRequestError, requireSameOriginAdminMutation } from "./admin-mutation"
 
 const ticketID = z.string().regex(/^spt_[0-9A-HJKMNP-TV-Z]{26}$/)
@@ -30,18 +25,16 @@ const expectedLockVersion = z
   .strict()
 
 export interface AdminSupportDependencies {
-  transaction: typeof Database.transaction
-  getAdminSupportTicketWithDb: typeof getAdminSupportTicketWithDb
-  mutateAdminSupportTicketWithDb: typeof mutateAdminSupportTicketWithDb
-  writeAdminAuditWithDb: typeof writeAdminAuditWithDb
+  batch: typeof Database.batch
+  mutateAdminSupportTicket: typeof mutateAdminSupportTicket
+  adminAuditQuery: typeof adminAuditQuery
   writeAdminAudit: typeof writeAdminAudit
 }
 
 const productionDependencies: AdminSupportDependencies = {
-  transaction: Database.transaction,
-  getAdminSupportTicketWithDb,
-  mutateAdminSupportTicketWithDb,
-  writeAdminAuditWithDb,
+  batch: Database.batch,
+  mutateAdminSupportTicket,
+  adminAuditQuery,
   writeAdminAudit,
 }
 
@@ -88,30 +81,34 @@ export async function mutateAdminSupport(
     requireSameOriginAdminMutation(request)
     const admin = requirePlatformAdminPermission(context, "support.manage")
     const input = parseMutationInput(raw)
-    return await dependencies.transaction(async (tx) => {
-      const before = await dependencies.getAdminSupportTicketWithDb(tx, { ticketID: input.ticketID })
-      const result = await dependencies.mutateAdminSupportTicketWithDb(tx, { ...input, adminID: admin.id })
-      await dependencies.writeAdminAuditWithDb(tx, {
-        adminID: admin.id,
-        actorEmail: admin.email,
-        action,
-        outcome: "success",
-        request,
-        targetType: "support_ticket",
-        targetID: result.id,
-        metadata: {
-          operation: input.operation,
-          before_status: before.ticket.status,
-          after_status: result.status,
-          before_priority: before.ticket.priority,
-          after_priority: result.priority,
-          before_assigned_admin_id: before.ticket.assigned_admin_id,
-          after_assigned_admin_id: result.assignedAdminID,
-          lock_version: result.lockVersion,
-        },
-      })
-      return { ok: true as const, ticket: result, message: successMessage(input.operation) }
-    })
+    const result = await dependencies.mutateAdminSupportTicket(
+      { ...input, adminID: admin.id },
+      {
+        batch: dependencies.batch,
+        effect: (tx, { before, after }) => [
+          dependencies.adminAuditQuery(tx, {
+            adminID: admin.id,
+            actorEmail: admin.email,
+            action,
+            outcome: "success",
+            request,
+            targetType: "support_ticket",
+            targetID: after.id,
+            metadata: {
+              operation: input.operation,
+              before_status: before.status,
+              after_status: after.status,
+              before_priority: before.priority,
+              after_priority: after.priority,
+              before_assigned_admin_id: before.assigned_admin_id,
+              after_assigned_admin_id: after.assignedAdminID,
+              lock_version: after.lockVersion,
+            },
+          }),
+        ],
+      },
+    )
+    return { ok: true as const, ticket: result, message: successMessage(input.operation) }
   } catch (error) {
     const failure = mutationFailure(error)
     try {
