@@ -3,6 +3,8 @@ import { dirname, join } from "node:path"
 import { defineConfig, type Plugin, type PluginOption } from "vite"
 import { solidStart } from "@solidjs/start/config"
 import { nitro } from "nitro/vite"
+import { adminCompatibility } from "./cloudflare.config"
+import { normalizeSolidStartRoutePaths } from "../app/vite-route-manifest"
 
 const require = createRequire(import.meta.url)
 
@@ -58,12 +60,17 @@ export default defineConfig({
     solidStart({
       middleware: "./src/middleware.ts",
     }) as PluginOption,
+    normalizeSolidStartRoutePaths(),
     quoteWindowsDefinePaths(),
     nitro({
-      compatibilityDate: "2024-09-19",
+      compatibilityDate: adminCompatibility.date,
       preset: "cloudflare-module",
       cloudflare: {
         nodeCompat: true,
+        wrangler: {
+          compatibility_date: adminCompatibility.date,
+          compatibility_flags: adminCompatibility.flags,
+        },
       },
     }),
   ],

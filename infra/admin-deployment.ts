@@ -1,5 +1,6 @@
 import { adminOrigin, domain, enableD1Backups, enableMonitoring, runtimeOrigin } from "./stage"
 import mongolGPTPackage from "../packages/mongolgpt/package.json"
+import { adminCompatibility } from "../packages/console/admin/cloudflare.config"
 
 class LocalCommand extends $util.CustomResource {
   constructor(name: string, args: $util.Inputs, opts?: $util.CustomResourceOptions) {
@@ -86,6 +87,9 @@ export function createAdminDeployment(sharedLinks: readonly object[]) {
     domain: hostname,
     path: "packages/console/admin",
     link: [...sharedLinks, accessConfig, bootstrapEmails],
+    transform: {
+      server: { compatibility: adminCompatibility },
+    },
     environment: {
       MONGOLGPT_ADMIN_ORIGIN: adminOrigin,
       MONGOLGPT_RUNTIME_URL: runtimeOrigin,
