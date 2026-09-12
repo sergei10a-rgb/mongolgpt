@@ -74,7 +74,9 @@ test("payment service audit is manual, owner/dev-scoped and never deploys", asyn
   expect(commands).toContain('mktemp "$RUNNER_TEMP/mongolgpt-payment-stderr.XXXXXX"')
   expect(commands).toContain('trap \'rm -f "$diff_file" "$stderr_file" "$adapter_file" "$diagnostic_file"\' EXIT')
   expect(commands).toContain('export MONGOLGPT_PAYMENT_DIAGNOSTIC_FILE="$diagnostic_file"')
-  expect(commands).toContain('bun script/report-dev-payment-failure.ts "$diagnostic_file" "$diff_file" "$stderr_file"')
+  expect(commands).toContain(
+    'bun script/report-dev-payment-failure.ts "$diagnostic_file" "$diff_file" "$stderr_file" .sst/log/pulumi.log .sst/log/pulumi.err.log',
+  )
   expect(commands).toContain('export SST_PULUMI_PATH="$adapter_file"')
   expect(commands.indexOf("bun build script/pulumi-dev-payment.ts --compile")).toBeLessThan(
     commands.indexOf("bun sst diff"),

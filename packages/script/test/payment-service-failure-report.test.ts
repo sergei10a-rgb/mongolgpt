@@ -13,7 +13,7 @@ async function run(args: string[]) {
     new Response(child.stdout).text(),
     new Response(child.stderr).text(),
   ])
-  return { exitCode, stdout, stderr, parsed: JSON.parse(stdout) as { status: string; sst: string } }
+  return { exitCode, stdout, stderr, parsed: JSON.parse(stdout) as unknown }
 }
 
 async function fixture(files: Record<string, string>) {
@@ -114,6 +114,63 @@ test("oversized SST logs are unreadable and private data is never emitted", asyn
     const result = await run([join(root, "receipt"), join(root, "stdout"), join(root, "stderr")])
     expect(result.parsed).toEqual({ status: "runtime-launch", sst: "unreadable" })
     expect(result.stdout + result.stderr).not.toContain(secret)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("native logs report fixed categories and counts, never sanitized or raw messages", async () => {
+  const root = await fixture({
+    receipt: JSON.stringify({ status: "native-failed" }),
+    stdout: "[]",
+    stderr: "wrapper failed",
+    nativeOut: `error: Cannot find module ${secret}\nerror: TypeError: sensitive customer input ${secret}`,
+    nativeErr: `error: unknown failure with sensitive data ${secret}`,
+  })
+  try {
+    const result = await run(["receipt", "stdout", "stderr", "nativeOut", "nativeErr"].map((name) => join(root, name)))
+    expect(result.parsed).toEqual({
+      status: "native-failed",
+      sst: "unclassified",
+      native: { readableFiles: 2, errorCount: 3, categories: ["module-resolution", "javascript-exception"] },
+    })
+    expect(result.stdout + result.stderr).not.toContain(secret)
+    expect(result.stdout).not.toContain("sensitive")
+    expect(result.stderr).toBe("")
+    const missing = await run(["receipt", "stdout", "stderr", "absent", "nativeErr"].map((name) => join(root, name)))
+    expect(missing.parsed).toEqual({
+      status: "native-failed",
+      sst: "unclassified",
+      native: { readableFiles: 1, errorCount: 1, categories: [] },
+    })
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test("pinned native target dependency diagnostics stay distinct and never authorize an update", async () => {
+  const root = await fixture({ receipt: '{"status":"native-failed"}', stdout: "[]", stderr: "", nativeErr: "" })
+  try {
+    for (const [message, category] of [
+      [
+        `Resource '${secret}' depends on '${secret}' which was was not specified in --target list.`,
+        "omitted-dependency-create",
+      ],
+      [`Resource '${secret}' will be destroyed but was not specified in --target list.`, "omitted-dependent-destroy"],
+      [`Target '${secret}' could not be found in the stack.`, "native-target-not-found"],
+    ]) {
+      await writeFile(join(root, "nativeOut"), `error: ${message}`)
+      const result = await run(
+        ["receipt", "stdout", "stderr", "nativeOut", "nativeErr"].map((name) => join(root, name)),
+      )
+      expect(result.parsed).toEqual({
+        status: "native-failed",
+        sst: "unclassified",
+        native: { readableFiles: 2, errorCount: 1, categories: [category] },
+      })
+      expect(result.stdout + result.stderr).not.toContain(secret)
+      expect(result.stdout).not.toContain("approved")
+    }
   } finally {
     await rm(root, { recursive: true, force: true })
   }

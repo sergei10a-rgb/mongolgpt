@@ -75,9 +75,11 @@ test("payment deployment is manually confirmed, disabled, owner/dev-only and gua
     'trap \'rm -f "$diff_file" "$stdout_file" "$stderr_file" "$adapter_file" "$diagnostic_file"\' EXIT',
   )
   expect(commands).toContain('export MONGOLGPT_PAYMENT_DIAGNOSTIC_FILE="$diagnostic_file"')
-  expect(commands).toContain('bun script/report-dev-payment-failure.ts "$diagnostic_file" "$diff_file" "$stderr_file"')
   expect(commands).toContain(
-    'bun script/report-dev-payment-failure.ts "$diagnostic_file" "$stdout_file" "$stderr_file"',
+    'bun script/report-dev-payment-failure.ts "$diagnostic_file" "$diff_file" "$stderr_file" .sst/log/pulumi.log .sst/log/pulumi.err.log',
+  )
+  expect(commands).toContain(
+    'bun script/report-dev-payment-failure.ts "$diagnostic_file" "$stdout_file" "$stderr_file" .sst/log/pulumi.log .sst/log/pulumi.err.log',
   )
   expect(commands).toContain(': >"$diagnostic_file"')
   const ordered = [

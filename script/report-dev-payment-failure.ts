@@ -1,6 +1,7 @@
 import { open } from "node:fs/promises"
 import { constants } from "node:fs"
 import { paymentPulumiStatuses } from "../packages/script/src/payment-service-pulumi-args"
+import { inspectSstCommandErrorDiagnostics } from "../packages/script/src/sst-error-diagnostics"
 
 const receiptLimit = 1024
 const logLimit = 16 * 1024 * 1024
@@ -61,7 +62,7 @@ function classifySst(stdout: string | undefined, stderr: string | undefined): Ss
 
 async function main() {
   const args = process.argv.slice(2)
-  if (args.length !== 3) {
+  if (args.length !== 3 && args.length !== 5) {
     process.stdout.write(JSON.stringify({ status: "unavailable", sst: "unreadable" satisfies Sst }))
     return
   }
@@ -73,7 +74,44 @@ async function main() {
     readRegularFile(stderrPath, logLimit),
   ])
 
-  process.stdout.write(JSON.stringify({ status: statusFromReceipt(receipt), sst: classifySst(stdout, stderr) }))
+  const native = args.length === 5 ? await classifyNative(args.slice(3)) : undefined
+  process.stdout.write(
+    JSON.stringify({
+      status: statusFromReceipt(receipt),
+      sst: classifySst(stdout, stderr),
+      ...(native ? { native } : {}),
+    }),
+  )
+}
+
+async function classifyNative(paths: string[]) {
+  const secrets = Object.entries(process.env).flatMap(([name, value]) =>
+    /(credential|key|password|secret|token)/i.test(name) && value ? [value] : [],
+  )
+  const logs = await Promise.all(paths.map((path) => readRegularFile(path, logLimit)))
+  const messages = logs.flatMap((log) =>
+    log === undefined ? [] : inspectSstCommandErrorDiagnostics(log, secrets).map((item) => item.message),
+  )
+  // Only fixed labels escape this boundary, never even sanitized free-form native messages.
+  const signatures = [
+    // Pulumi v3.215.0 sdk/go/common/diag/errors.go, diagnostics 2010, 2013 and 2014.
+    ["omitted-dependency-create", /which was was not specified in --target list\./],
+    ["omitted-dependent-destroy", /will be destroyed but was not specified in --target list\./],
+    ["native-target-not-found", /could not be found in the stack\./],
+    ["module-resolution", /Cannot find module|ERR_MODULE_NOT_FOUND|Could not resolve/],
+    ["javascript-exception", /(?:ReferenceError|TypeError|SyntaxError):/],
+    ["authentication", /Authentication error|Unauthorized|HTTP 401|status code: 401/],
+    ["permission", /Forbidden|HTTP 403|status code: 403|permission denied/i],
+    ["rate-limit", /Too Many Requests|HTTP 429|status code: 429/],
+    ["snapshot-integrity", /snapshot integrity/i],
+  ] as const
+  return {
+    readableFiles: logs.filter((log) => log !== undefined).length,
+    errorCount: messages.length,
+    categories: signatures.flatMap(([label, pattern]) =>
+      messages.some((message) => pattern.test(message)) ? [label] : [],
+    ),
+  }
 }
 
 await main().catch(() => {
