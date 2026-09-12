@@ -30,6 +30,10 @@ describe("dev usage queue deployment audit", () => {
       allowedIndividually: false,
       rejectionReason: "wrong-worker-account",
       metadataEvidence: null,
+      opaqueInputFields: [],
+      opaqueInputKinds: [],
+      engineDiffAvailable: false,
+      engineDiffFields: [],
       fields: ["content", "textBindings"],
       detailedDiffAvailable: true,
       inputComparisonAvailable: true,
@@ -176,6 +180,79 @@ describe("dev usage queue deployment audit", () => {
     })
     expect(report.changes.every((item) => !item.allowedIndividually)).toBe(true)
     expect(JSON.stringify(report)).not.toMatch(/private-|secret|04da6b54/)
+  })
+
+  test("classifies hidden input shapes and engine diff keys without leaking payloads", () => {
+    const pulumiSignatureProperty = "4dabf18193072939515e22adb298388d"
+    const pulumiHiddenValueSignature = "1b47061264138c4ac30d75fd1eb44270"
+    const report = summarizeUsageQueueDeploymentDiff([
+      {
+        ...change(),
+        diffs: ["contentSha256", "private-field"],
+        old: { inputs: { bindings: { [pulumiSignatureProperty]: pulumiHiddenValueSignature, value: "[secret]" } } },
+        new: {
+          inputs: {
+            bindings: { [pulumiSignatureProperty]: pulumiHiddenValueSignature, value: "[secret]" },
+            contentFile: "04da6b54-80e4-46f7-96ec-b56ff0331ba9",
+            "private-field": { secure: "private-value" },
+          },
+        },
+      },
+    ])
+    expect(report.changes[0]).toMatchObject({
+      opaqueInputFields: ["bindings", "contentFile", "other"],
+      opaqueInputKinds: ["computed", "encrypted-value", "secret-mask", "secret-wrapper"],
+      engineDiffAvailable: true,
+      engineDiffFields: ["contentSha256", "other"],
+      allowedIndividually: false,
+    })
+    expect(JSON.stringify(report)).not.toMatch(/private-|04da6b54|4dabf181/)
+  })
+
+  test("reports only known provider version values while keeping unknown config keys private", () => {
+    const provider = {
+      ...change(),
+      type: "pulumi:providers:pulumi-nodejs",
+      urn: "urn:pulumi:dev::mongolgpt::pulumi:providers:pulumi-nodejs::default",
+      old: { inputs: { "cloudflare:version": "6.14.0", "random:version": "4.19.2", "private:config": "private-old" } },
+      new: {
+        inputs: { "cloudflare:version": "6.15.0", "random:version": "private-new", "private:config": "private-new" },
+      },
+    }
+    const report = summarizeUsageQueueDeploymentDiff([provider])
+    expect(report.changes[0]).toMatchObject({
+      allowedIndividually: false,
+      changedInputFields: ["cloudflare:version", "other", "random:version"],
+      metadataEvidence: {
+        configurationChanges: [
+          {
+            field: "cloudflare:version",
+            namespaced: true,
+            oldKind: "string",
+            newKind: "string",
+            oldVersion: "6.14.0",
+            newVersion: "6.15.0",
+          },
+          {
+            field: "random:version",
+            namespaced: true,
+            oldKind: "string",
+            newKind: "string",
+            oldVersion: "4.19.2",
+            newVersion: null,
+          },
+          {
+            field: "other",
+            namespaced: true,
+            oldKind: "string",
+            newKind: "string",
+            oldVersion: null,
+            newVersion: null,
+          },
+        ],
+      },
+    })
+    expect(JSON.stringify(report)).not.toContain("private")
   })
 
   test("rejects malformed metadata, wrong account stack or stage, and oversized arrays", () => {

@@ -51,10 +51,18 @@ const fields = new Set([
   "email",
   "pluginDownloadURL",
   "__internal",
+  "cloudflare:version",
+  "random:version",
 ])
 
 // Pulumi 3.215.0 providers/registry.go reserves these engine metadata fields.
 const internalFields = new Set(["name", "version", "pluginDownloadURL", "pluginChecksums", "parameterization"])
+const pulumiSignatureProperty = "4dabf18193072939515e22adb298388d"
+const pulumiHiddenValueSignature = "1b47061264138c4ac30d75fd1eb44270"
+const pulumiAssetSignature = "c44067f5952c0a294b673a41bacd8c17"
+const pulumiArchiveSignature = "0def7320c3a5731c473e5ecbe6d01bc7"
+const pulumiResourceSignature = "5cf8f73096256a8f31e491e813e4eb8e"
+const pulumiOutputSignature = "d0e6a833031e9bbcd3f4e8bde6ca49a4"
 
 // Report only bounded deployment metadata, never state inputs, outputs, or code.
 export function summarizeUsageQueueDeploymentDiff(value: unknown) {
@@ -88,6 +96,20 @@ export function summarizeUsageQueueDeploymentDiff(value: unknown) {
       allowedIndividually: rejectionReason === null,
       rejectionReason,
       metadataEvidence: metadataEvidence(entry.type, oldInputs, newInputs),
+      opaqueInputFields: [
+        ...new Set(
+          [oldInputs, newInputs].flatMap((inputs) =>
+            Object.entries(inputs ?? {})
+              .filter(([, value]) => opaqueKinds(value).length > 0)
+              .map(([key]) => (fields.has(key) ? key : "other")),
+          ),
+        ),
+      ].sort(),
+      opaqueInputKinds: [...new Set([oldInputs, newInputs].flatMap(opaqueKinds))].sort(),
+      engineDiffAvailable: Array.isArray(entry.diffs),
+      engineDiffFields: Array.isArray(entry.diffs)
+        ? [...new Set(entry.diffs.map((key) => (typeof key === "string" && fields.has(key) ? key : "other")))].sort()
+        : [],
       fields: [
         ...new Set(
           Object.keys(detail ?? {}).map((path) => {
@@ -123,6 +145,16 @@ function metadataEvidence(
     const oldInternal = record(oldInputs.__internal)
     const newInternal = record(newInputs.__internal)
     return {
+      configurationChanges: [...new Set([...Object.keys(oldInputs), ...Object.keys(newInputs)])]
+        .filter((key) => !isDeepStrictEqual(oldInputs[key], newInputs[key]))
+        .map((key) => ({
+          field: fields.has(key) ? key : "other",
+          namespaced: key.includes(":"),
+          oldKind: valueKind(oldInputs[key]),
+          newKind: valueKind(newInputs[key]),
+          oldVersion: version(key, oldInputs[key]),
+          newVersion: version(key, newInputs[key]),
+        })),
       emptyInternalMetadataAdded:
         !Object.hasOwn(oldInputs, "__internal") && newInternal !== undefined && Object.keys(newInternal).length === 0,
       changedInternalFields: [
@@ -147,6 +179,57 @@ function metadataEvidence(
     newUrlIsComputed: newProperties.url === "04da6b54-80e4-46f7-96ec-b56ff0331ba9",
     includeUnchanged: isDeepStrictEqual(oldInputs.include, newInputs.include),
   }
+}
+
+function valueKind(value: unknown) {
+  if (value === undefined) return "absent"
+  if (value === null) return "null"
+  if (Array.isArray(value)) return "array"
+  return typeof value
+}
+
+function version(key: string, value: unknown) {
+  return ["cloudflare:version", "random:version"].includes(key) &&
+    typeof value === "string" &&
+    /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(value)
+    ? value
+    : null
+}
+
+function opaqueKinds(value: unknown): string[] {
+  if (typeof value === "string") {
+    return [
+      ...(value.includes("[secret]") ? ["secret-mask"] : []),
+      ...(value.includes("[unknown]") || value === "04da6b54-80e4-46f7-96ec-b56ff0331ba9" ? ["computed"] : []),
+    ]
+  }
+  if (Array.isArray(value)) return [...new Set(value.flatMap(opaqueKinds))]
+  const item = record(value)
+  if (!item) return []
+  // Public Pulumi serialization markers. Never include payloads or private paths.
+  const marker = item[pulumiSignatureProperty]
+  const markerKind =
+    marker === pulumiHiddenValueSignature
+      ? "secret-wrapper"
+      : marker === pulumiAssetSignature
+        ? "asset"
+        : marker === pulumiArchiveSignature
+          ? "archive"
+          : marker === pulumiResourceSignature
+            ? "resource-reference"
+            : marker === pulumiOutputSignature
+              ? "output-wrapper"
+              : "serialization-marker"
+  return [
+    ...new Set([
+      ...(marker !== undefined ? [markerKind] : []),
+      ...(Object.hasOwn(item, "__pulumiUnknown") ? ["computed"] : []),
+      ...(Object.keys(item).length === 1 && (Object.hasOwn(item, "secure") || Object.hasOwn(item, "ciphertext"))
+        ? ["encrypted-value"]
+        : []),
+      ...Object.values(item).flatMap(opaqueKinds),
+    ]),
+  ]
 }
 
 function resourceKind(type: string, name: string, inTarget: boolean) {

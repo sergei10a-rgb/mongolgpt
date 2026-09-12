@@ -41,6 +41,35 @@ describe("usage queue deployment guard", () => {
     rejects(worker("UsageQueueSubscriberFunctionScript", { accountId: "wrong-account" }))
   })
 
+  test("permits only the heartbeat component's computed URL and output-only repeated event", () => {
+    const entry = heartbeatLink()
+    const resolved = {
+      ...entry,
+      new: { ...entry.new, outputs: { properties: { url: unknownString }, target: "UsageQueueHeartbeatHandler" } },
+    }
+    expect(verifyUsageQueueDeploymentDiff([worker(), entry, resolved])).toEqual({ workerUpdates: 1, urlUpdates: 0 })
+    rejects([entry, resolved, resolved])
+    rejects([same(entry.type, "UsageQueueHeartbeatHandlerLinkRef"), entry])
+    rejects({ ...entry, op: "create" })
+    rejects({ ...entry, keys: ["properties"] })
+    rejects({ ...entry, urn: entry.urn.replace("HandlerLinkRef", "OtherLinkRef") })
+    rejects({
+      ...entry,
+      new: { ...entry.new, inputs: { ...entry.new.inputs, properties: { url: "https://changed.example" } } },
+    })
+    rejects({
+      ...entry,
+      new: { ...entry.new, inputs: { ...entry.new.inputs, properties: { url: unknownString, other: true } } },
+    })
+    rejects({ ...entry, new: { ...entry.new, inputs: { ...entry.new.inputs, include: [] } } })
+    rejects({ ...entry, new: { ...entry.new, inputs: { ...entry.new.inputs, other: privateValue } } })
+    rejects({ ...entry, old: { ...entry.old, custom: true }, new: { ...entry.new, custom: true } })
+    rejects([
+      entry,
+      { ...resolved, old: { ...resolved.old, id: "different" }, new: { ...resolved.new, id: "different" } },
+    ])
+  })
+
   test("rejects every disallowed worker input mutation", () => {
     rejects(worker("UsageQueueSubscriberFunctionScript", { stablePatch: { bindings: [{ name: "NEW" }] } }))
     rejects(
@@ -104,6 +133,60 @@ describe("usage queue deployment guard", () => {
     const actual = worker()
     rejects({ ...actual, old: undefined, new: undefined, oldState: actual.old, newState: actual.new })
     rejects(url("UsageQueueSubscriberFunctionUrl.sst.cloudflare.WorkerUrl", { opaque: true }))
+  })
+
+  test("requires unredacted engine change metadata for identical secret binding masks", () => {
+    const entry = worker()
+    const bindings = [{ type: "secret_text", name: "TOKEN", text: "[secret]" }]
+    const redacted = {
+      ...entry,
+      diffs: ["contentSha256"],
+      detailedDiff: null,
+      old: { ...entry.old, inputs: { ...entry.old!.inputs, bindings } },
+      new: { ...entry.new, inputs: { ...entry.new!.inputs, contentFile: entry.old!.inputs!.contentFile, bindings } },
+    }
+    expect(verifyUsageQueueDeploymentDiff([redacted])).toEqual({ workerUpdates: 1, urlUpdates: 0 })
+    for (const diffs of [undefined, [], ["bindings"], ["contentSha256", "bindings"], ["contentSha256", privateValue]])
+      rejects({ ...redacted, diffs })
+    rejects({ ...redacted, keys: ["bindings"] })
+    rejects({ ...redacted, detailedDiff: { "bindings[0].text": { diffKind: "update" } } })
+    rejects({ ...redacted, new: { ...redacted.new, inputs: { ...redacted.new.inputs, bindings: [] } } })
+    for (const hidden of [
+      unknownString,
+      { __pulumiUnknown: true },
+      { secure: "[secret]" },
+      { ciphertext: "[secret]" },
+    ]) {
+      const bindings = [{ type: "secret_text", name: "TOKEN", text: hidden }]
+      rejects({
+        ...redacted,
+        old: { ...redacted.old, inputs: { ...redacted.old.inputs, bindings } },
+        new: { ...redacted.new, inputs: { ...redacted.new.inputs, bindings } },
+      })
+    }
+    rejects({ ...redacted, new: { ...redacted.new, inputs: { ...redacted.new.inputs, contentSha256: "[secret]" } } })
+    const pulumiSignatureProperty = "4dabf18193072939515e22adb298388d"
+    const pulumiHiddenValueSignature = "1b47061264138c4ac30d75fd1eb44270"
+    const wrapped = { [pulumiSignatureProperty]: pulumiHiddenValueSignature, value: bindings }
+    expect(
+      verifyUsageQueueDeploymentDiff([
+        {
+          ...redacted,
+          old: { ...redacted.old, inputs: { ...redacted.old.inputs, bindings: wrapped } },
+          new: { ...redacted.new, inputs: { ...redacted.new.inputs, bindings: wrapped } },
+        },
+      ]),
+    ).toEqual({ workerUpdates: 1, urlUpdates: 0 })
+    for (const bindings of [
+      { ...wrapped, value: unknownString },
+      { ...wrapped, [pulumiSignatureProperty]: "unknown-serialization" },
+      { ...wrapped, extra: true },
+    ])
+      rejects({
+        ...redacted,
+        old: { ...redacted.old, inputs: { ...redacted.old.inputs, bindings } },
+        new: { ...redacted.new, inputs: { ...redacted.new.inputs, bindings } },
+      })
   })
 
   test("accepts minimal SST input proof while rejecting conflicting optional state metadata", () => {
@@ -295,6 +378,25 @@ function url(
 
 function stack() {
   return { urn: urnFor("pulumi:pulumi:Stack", "mongolgpt-dev"), type: "pulumi:pulumi:Stack", op: "update" }
+}
+
+function heartbeatLink() {
+  const type = "sst:sst:LinkRef"
+  const urn = urnFor(type, "UsageQueueHeartbeatHandlerLinkRef")
+  const include = [
+    {
+      type: "cloudflare.binding",
+      binding: "serviceBindings",
+      properties: { service: "mongolgpt-dev-usagequeueheartbeathandlerscript" },
+    },
+  ]
+  return {
+    urn,
+    type,
+    op: "update",
+    old: { urn, type, custom: false, inputs: { properties: {}, include } },
+    new: { urn, type, custom: false, inputs: { properties: { url: unknownString }, include } },
+  }
 }
 
 function same(type: string, name: string) {
