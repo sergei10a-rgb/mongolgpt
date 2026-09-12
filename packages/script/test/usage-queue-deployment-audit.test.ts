@@ -162,7 +162,7 @@ describe("dev usage queue deployment audit", () => {
     ])
     expect(report.changes[0]).toMatchObject({
       changedInputFields: ["__internal"],
-      rejectionReason: "unapproved-resource",
+      rejectionReason: "unapproved-provider-configuration",
       metadataEvidence: { emptyInternalMetadataAdded: true, changedInternalFields: [] },
     })
     expect(report.changes[1]).toMatchObject({
@@ -188,7 +188,7 @@ describe("dev usage queue deployment audit", () => {
     const report = summarizeUsageQueueDeploymentDiff([
       {
         ...change(),
-        diffs: ["contentSha256", "private-field"],
+        diffs: ["contentSha256", "etag", "modifiedOn", "private-field"],
         old: {
           inputs: { bindings: { [pulumiSignatureProperty]: pulumiHiddenValueSignature, ciphertext: "[secret]" } },
         },
@@ -205,7 +205,7 @@ describe("dev usage queue deployment audit", () => {
       opaqueInputFields: ["bindings", "contentFile", "other"],
       opaqueInputKinds: ["computed", "encrypted-value", "secret-mask", "secret-wrapper"],
       engineDiffAvailable: true,
-      engineDiffFields: ["contentSha256", "other"],
+      engineDiffFields: ["contentSha256", "etag", "modifiedOn", "other"],
       allowedIndividually: false,
     })
     expect(JSON.stringify(report)).not.toMatch(/private-|04da6b54|4dabf181/)

@@ -9,6 +9,21 @@ const linkType = "sst:sst:LinkRef"
 const heartbeatLinkName = "UsageQueueHeartbeatHandlerLinkRef"
 const unknownString = "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
 const maximumEntries = 2_000
+// Output-only properties in the pinned @pulumi/cloudflare 6.15.0 WorkersScript schema.
+export const usageQueueWorkerComputedFields = new Set([
+  "createdOn",
+  "etag",
+  "handlers",
+  "hasAssets",
+  "hasModules",
+  "lastDeployedFrom",
+  "migrationTag",
+  "modifiedOn",
+  "namedHandlers",
+  "placementMode",
+  "placementStatus",
+  "startupTimeMs",
+])
 
 const workers = new Map([
   [
@@ -59,6 +74,7 @@ type RejectionReason =
   | "unapproved-link-properties"
   | "opaque-worker-inputs"
   | "unproved-worker-secret-bindings"
+  | "unapproved-provider-configuration"
   | "wrong-worker-account"
   | "wrong-worker-name"
   | "missing-worker-content"
@@ -130,6 +146,11 @@ export function verifyUsageQueueDeploymentDiff(value: unknown): UsageQueueDeploy
 
     if (type === "pulumi:pulumi:Stack" && parsed.name === stackName && parsed.type === type) continue
 
+    if (type === "pulumi:providers:pulumi-nodejs" && parsed.type === type) {
+      assertProviderVersionMetadata(entry, urn, type)
+      continue
+    }
+
     const worker = workers.get(parsed.name)
     if (type === workerType && worker) {
       assertWorkerUpdate(entry, urn, type, worker.scriptName)
@@ -148,6 +169,25 @@ export function verifyUsageQueueDeploymentDiff(value: unknown): UsageQueueDeploy
   }
 
   return { workerUpdates, urlUpdates }
+}
+
+function assertProviderVersionMetadata(entry: Record<string, unknown>, urn: string, type: string) {
+  const { oldInputs, newInputs } = stateInputs(entry, urn, type)
+  const versions = { "cloudflare:version": "6.15.0", "random:version": "4.19.2" }
+  const keys = Object.keys(versions)
+  if (hasOpaqueValue(oldInputs) || hasOpaqueValue(newInputs)) reject("unapproved-provider-configuration")
+  if (entry.keys !== undefined && (!Array.isArray(entry.keys) || entry.keys.length !== 0))
+    reject("unapproved-provider-configuration")
+  if (entry.diffs !== undefined && (!Array.isArray(entry.diffs) || entry.diffs.some((key) => !keys.includes(key))))
+    reject("unapproved-provider-configuration")
+  if (entry.detailedDiff !== undefined && entry.detailedDiff !== null) {
+    const detail = record(entry.detailedDiff)
+    if (!detail || Object.keys(detail).some((key) => !keys.includes(key))) reject("unapproved-provider-configuration")
+  }
+  if (keys.some((key) => Object.hasOwn(oldInputs, key))) reject("unapproved-provider-configuration")
+  if (!Object.entries(versions).every(([key, value]) => newInputs[key] === value))
+    reject("unapproved-provider-configuration")
+  if (!isDeepStrictEqual(oldInputs, omit(newInputs, keys))) reject("unapproved-provider-configuration")
 }
 
 function assertHeartbeatLinkUpdate(entry: Record<string, unknown>, urn: string, type: string) {
@@ -189,12 +229,19 @@ function assertWorkerUpdate(entry: Record<string, unknown>, urn: string, type: s
     if (
       !Array.isArray(entry.diffs) ||
       !entry.diffs.includes("contentSha256") ||
-      entry.diffs.some((key) => key !== "contentSha256" && key !== "contentFile")
+      entry.diffs.some((key) => !allowedWorkerDiffKey(key, oldInputs, newInputs))
     )
       reject("unproved-worker-secret-bindings")
     if (entry.detailedDiff !== undefined && entry.detailedDiff !== null) {
       const detailed = record(entry.detailedDiff)
-      if (!detailed || Object.keys(detailed).some((key) => key !== "contentSha256" && key !== "contentFile"))
+      if (
+        !detailed ||
+        Object.entries(detailed).some(
+          ([key, value]) =>
+            !allowedWorkerDiffKey(key, oldInputs, newInputs) ||
+            (usageQueueWorkerComputedFields.has(key) && record(value)?.inputDiff === true),
+        )
+      )
         reject("unproved-worker-secret-bindings")
     }
     if (entry.keys !== undefined && (!Array.isArray(entry.keys) || entry.keys.length !== 0))
@@ -214,6 +261,17 @@ function assertWorkerUpdate(entry: Record<string, unknown>, urn: string, type: s
   const oldStable = omit(oldInputs, ["contentFile", "contentSha256"])
   const newStable = omit(newInputs, ["contentFile", "contentSha256"])
   if (!isDeepStrictEqual(oldStable, newStable)) reject("changed-worker-bindings-or-settings")
+}
+
+function allowedWorkerDiffKey(key: unknown, oldInputs: Record<string, unknown>, newInputs: Record<string, unknown>) {
+  return (
+    key === "contentSha256" ||
+    key === "contentFile" ||
+    (typeof key === "string" &&
+      usageQueueWorkerComputedFields.has(key) &&
+      !Object.hasOwn(oldInputs, key) &&
+      !Object.hasOwn(newInputs, key))
+  )
 }
 
 function hasOnlyKnownRedactions(value: unknown): boolean {

@@ -85,6 +85,35 @@ describe("usage queue deployment guard", () => {
     rejects(worker("UsageQueueSubscriberFunctionScript", { addInput: ["unexpected", "value"] }))
   })
 
+  test("accepts only the observed dynamic-provider version metadata additions", () => {
+    const type = "pulumi:providers:pulumi-nodejs"
+    const urn = urnFor(type, "default")
+    const versions = { "cloudflare:version": "6.15.0", "random:version": "4.19.2" }
+    const entry = { urn, type, op: "update", old: state(urn, type, {}), new: state(urn, type, versions) }
+    expect(verifyUsageQueueDeploymentDiff([entry, worker()])).toEqual({ workerUpdates: 1, urlUpdates: 0 })
+    rejects({ ...entry, op: "create" })
+    rejects({ ...entry, keys: ["cloudflare:version"] })
+    rejects({ ...entry, diffs: ["apiToken"] })
+    rejects({ ...entry, detailedDiff: { apiToken: { kind: "update" } } })
+    rejects({ ...entry, old: state(urn, type, { "cloudflare:version": "6.14.0" }) })
+    for (const inputs of [
+      { ...versions, "cloudflare:version": "6.16.0" },
+      { ...versions, "random:version": "4.20.0" },
+      { "cloudflare:version": "6.15.0" },
+      { ...versions, apiToken: privateValue },
+      { ...versions, "private:config": true },
+      { ...versions, __internal: {} },
+    ])
+      rejects({ ...entry, new: state(urn, type, inputs) })
+    rejects({
+      ...entry,
+      old: state(urn, type, { apiToken: "[secret]" }),
+      new: state(urn, type, { ...versions, apiToken: "[secret]" }),
+    })
+    rejects({ ...entry, new: { ...entry.new, id: "different-provider" } })
+    rejects([entry, entry])
+  })
+
   test("rejects disallowed URL input mutation and unchanged etag", () => {
     expect(
       verifyUsageQueueDeploymentDiff([
@@ -146,6 +175,29 @@ describe("usage queue deployment guard", () => {
       new: { ...entry.new, inputs: { ...entry.new!.inputs, contentFile: entry.old!.inputs!.contentFile, bindings } },
     }
     expect(verifyUsageQueueDeploymentDiff([redacted])).toEqual({ workerUpdates: 1, urlUpdates: 0 })
+    for (const key of [
+      "createdOn",
+      "etag",
+      "handlers",
+      "hasAssets",
+      "hasModules",
+      "lastDeployedFrom",
+      "migrationTag",
+      "modifiedOn",
+      "namedHandlers",
+      "placementMode",
+      "placementStatus",
+      "startupTimeMs",
+    ]) {
+      const computed = { ...redacted, diffs: ["contentSha256", key] }
+      expect(verifyUsageQueueDeploymentDiff([computed])).toEqual({ workerUpdates: 1, urlUpdates: 0 })
+      rejects({
+        ...computed,
+        old: { ...computed.old, inputs: { ...computed.old.inputs, [key]: "same" } },
+        new: { ...computed.new, inputs: { ...computed.new.inputs, [key]: "same" } },
+      })
+      rejects({ ...computed, detailedDiff: { [key]: { kind: "update", inputDiff: true } } })
+    }
     for (const diffs of [undefined, [], ["bindings"], ["contentSha256", "bindings"], ["contentSha256", privateValue]])
       rejects({ ...redacted, diffs })
     rejects({ ...redacted, keys: ["bindings"] })
@@ -268,7 +320,7 @@ describe("usage queue deployment guard", () => {
       [worker("UsageQueueSubscriberFunctionScript", { deleteInput: "contentFile" }), "missing-worker-content"],
       [worker("UsageQueueSubscriberFunctionScript", { newContentSha256: privateValue }), "invalid-worker-hash"],
       [worker("UsageQueueSubscriberFunctionScript", { newStatePatch: { id: privateValue } }), "changed-state-id"],
-      [mutating("pulumi:providers:pulumi-nodejs", "private-provider", "update"), "unapproved-resource"],
+      [mutating("pulumi:providers:pulumi-nodejs", "private-provider", "update"), "unapproved-provider-configuration"],
     ] as const
     for (const [entry, reason] of cases) {
       expect(() => verifyUsageQueueDeploymentDiff([entry])).toThrow(UsageQueueDeploymentGuardError)

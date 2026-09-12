@@ -1,5 +1,9 @@
 import { isDeepStrictEqual } from "node:util"
-import { UsageQueueDeploymentGuardError, verifyUsageQueueDeploymentDiff } from "./usage-queue-deployment-guard"
+import {
+  UsageQueueDeploymentGuardError,
+  usageQueueWorkerComputedFields,
+  verifyUsageQueueDeploymentDiff,
+} from "./usage-queue-deployment-guard"
 
 const targets = ["UsageQueueSubscriber", "UsageQueueHeartbeat"] as const
 const operations = new Set([
@@ -14,6 +18,7 @@ const operations = new Set([
   "refresh",
 ])
 const fields = new Set([
+  ...usageQueueWorkerComputedFields,
   "content",
   "contentFile",
   "contentSha256",
