@@ -196,7 +196,7 @@ describe("usage queue deployment guard", () => {
         old: { ...computed.old, inputs: { ...computed.old.inputs, [key]: "same" } },
         new: { ...computed.new, inputs: { ...computed.new.inputs, [key]: "same" } },
       })
-      rejects({ ...computed, detailedDiff: { [key]: { kind: "update", inputDiff: true } } })
+      rejects({ ...computed, detailedDiff: { [key]: { diffKind: "update", inputDiff: true } } })
     }
     for (const diffs of [undefined, [], ["bindings"], ["contentSha256", "bindings"], ["contentSha256", privateValue]])
       rejects({ ...redacted, diffs })
@@ -242,6 +242,68 @@ describe("usage queue deployment guard", () => {
         old: { ...redacted.old, inputs: { ...redacted.old.inputs, bindings } },
         new: { ...redacted.new, inputs: { ...redacted.new.inputs, bindings } },
       })
+  })
+
+  test("permits only unconfigured optional-computed root additions from the precise worker preview", () => {
+    for (const name of Object.keys(workerTargets) as Array<keyof typeof workerTargets>) {
+      const entry = worker(name)
+      const bindings = [{ type: "secret_text", name: "TOKEN", text: "[secret]" }]
+      const detailedDiff = {
+        contentSha256: { diffKind: "update", inputDiff: false },
+        annotations: { diffKind: "add", inputDiff: false },
+        placement: { diffKind: "add", inputDiff: false },
+        tailConsumers: { diffKind: "add", inputDiff: false },
+      }
+      const preview = {
+        ...entry,
+        diffs: Object.keys(detailedDiff),
+        detailedDiff,
+        old: { ...entry.old, inputs: { ...entry.old!.inputs, bindings } },
+        new: { ...entry.new, inputs: { ...entry.new!.inputs, bindings } },
+      }
+      expect(verifyUsageQueueDeploymentDiff([preview])).toEqual({ workerUpdates: 1, urlUpdates: 0 })
+      rejects({ ...preview, detailedDiff: null })
+      rejects({ ...preview, keys: ["placement"] })
+      for (const key of ["annotations", "placement", "tailConsumers"]) {
+        rejects({ ...preview, diffs: preview.diffs.filter((field) => field !== key) })
+        for (const inputs of [{ [key]: null }, { [key]: { service: "different" } }]) {
+          rejects({ ...preview, old: { ...preview.old, inputs: { ...preview.old.inputs, ...inputs } } })
+          rejects({ ...preview, new: { ...preview.new, inputs: { ...preview.new.inputs, ...inputs } } })
+          rejects({
+            ...preview,
+            old: { ...preview.old, inputs: { ...preview.old.inputs, ...inputs } },
+            new: { ...preview.new, inputs: { ...preview.new.inputs, ...inputs } },
+          })
+        }
+        for (const value of [
+          { diffKind: "update", inputDiff: false },
+          { diffKind: "add-replace", inputDiff: false },
+          { diffKind: "add", inputDiff: true },
+          { diffKind: "add" },
+          { kind: "add", inputDiff: false },
+          null,
+        ])
+          rejects({ ...preview, detailedDiff: { ...detailedDiff, [key]: value } })
+        rejects({ ...preview, detailedDiff: { ...detailedDiff, [`${key}.private-child`]: { diffKind: "add" } } })
+        rejects({ ...preview, diffs: [...preview.diffs, `${key}.private-child`] })
+      }
+      for (const key of ["id", "usageModel", "keepBindings", "limits", "bindings", "unknown"]) {
+        rejects({ ...preview, diffs: [...preview.diffs, key] })
+        rejects({ ...preview, detailedDiff: { ...detailedDiff, [key]: { diffKind: "add", inputDiff: false } } })
+      }
+      for (const diffKind of [
+        "add-replace",
+        "update-replace",
+        "delete",
+        "delete-replace",
+        "unknown",
+        ["update"],
+        null,
+        1,
+      ]) {
+        rejects({ ...preview, detailedDiff: { ...detailedDiff, contentSha256: { diffKind, inputDiff: false } } })
+      }
+    }
   })
 
   test("accepts minimal SST input proof while rejecting conflicting optional state metadata", () => {

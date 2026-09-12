@@ -24,6 +24,8 @@ export const usageQueueWorkerComputedFields = new Set([
   "placementStatus",
   "startupTimeMs",
 ])
+// Optional+Computed in the pinned provider; only unconfigured root additions qualify.
+const workerOptionalComputedFields = new Set(["annotations", "placement", "tailConsumers"])
 
 const workers = new Map([
   [
@@ -226,21 +228,38 @@ function assertWorkerUpdate(entry: Record<string, unknown>, urn: string, type: s
     // Equal masks alone cannot prove that a binding has not changed.
     if (!hasOnlyKnownRedactions(oldInputs.bindings) || !hasOnlyKnownRedactions(newInputs.bindings))
       reject("opaque-worker-inputs")
+    const detailed = record(entry.detailedDiff)
+    const optionalComputed = new Set(
+      [...workerOptionalComputedFields].filter((key) => {
+        const change = record(detailed?.[key])
+        return (
+          Array.isArray(entry.diffs) &&
+          entry.diffs.includes(key) &&
+          !Object.hasOwn(oldInputs, key) &&
+          !Object.hasOwn(newInputs, key) &&
+          change?.diffKind === "add" &&
+          change.inputDiff === false
+        )
+      }),
+    )
     if (
       !Array.isArray(entry.diffs) ||
       !entry.diffs.includes("contentSha256") ||
-      entry.diffs.some((key) => !allowedWorkerDiffKey(key, oldInputs, newInputs))
+      entry.diffs.some((key) => !allowedWorkerDiffKey(key, oldInputs, newInputs) && !optionalComputed.has(key))
     )
       reject("unproved-worker-secret-bindings")
     if (entry.detailedDiff !== undefined && entry.detailedDiff !== null) {
-      const detailed = record(entry.detailedDiff)
       if (
         !detailed ||
-        Object.entries(detailed).some(
-          ([key, value]) =>
-            !allowedWorkerDiffKey(key, oldInputs, newInputs) ||
-            (usageQueueWorkerComputedFields.has(key) && record(value)?.inputDiff === true),
-        )
+        Object.entries(detailed).some(([key, value]) => {
+          const change = record(value)
+          return (
+            (!allowedWorkerDiffKey(key, oldInputs, newInputs) && !optionalComputed.has(key)) ||
+            typeof change?.diffKind !== "string" ||
+            !["add", "update"].includes(change.diffKind) ||
+            (usageQueueWorkerComputedFields.has(key) && change.inputDiff === true)
+          )
+        })
       )
         reject("unproved-worker-secret-bindings")
     }
