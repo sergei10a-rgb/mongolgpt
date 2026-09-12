@@ -167,7 +167,7 @@ describe("usage queue deployment guard", () => {
     rejects({ ...redacted, new: { ...redacted.new, inputs: { ...redacted.new.inputs, contentSha256: "[secret]" } } })
     const pulumiSignatureProperty = "4dabf18193072939515e22adb298388d"
     const pulumiHiddenValueSignature = "1b47061264138c4ac30d75fd1eb44270"
-    const wrapped = { [pulumiSignatureProperty]: pulumiHiddenValueSignature, value: bindings }
+    const wrapped = { [pulumiSignatureProperty]: pulumiHiddenValueSignature, ciphertext: "[secret]" }
     expect(
       verifyUsageQueueDeploymentDiff([
         {
@@ -178,7 +178,10 @@ describe("usage queue deployment guard", () => {
       ]),
     ).toEqual({ workerUpdates: 1, urlUpdates: 0 })
     for (const bindings of [
-      { ...wrapped, value: unknownString },
+      { ...wrapped, ciphertext: unknownString },
+      { ...wrapped, ciphertext: privateValue },
+      { [pulumiSignatureProperty]: pulumiHiddenValueSignature, value: "[secret]" },
+      { [pulumiSignatureProperty]: pulumiHiddenValueSignature, plaintext: privateValue },
       { ...wrapped, [pulumiSignatureProperty]: "unknown-serialization" },
       { ...wrapped, extra: true },
     ])

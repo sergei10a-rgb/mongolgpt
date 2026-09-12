@@ -184,7 +184,7 @@ function assertWorkerUpdate(entry: Record<string, unknown>, urn: string, type: s
   if (hasOpaqueValue(oldInputs.bindings) || hasOpaqueValue(newInputs.bindings)) {
     // Pulumi carries provider-reported changed keys separately from redacted states.
     // Equal masks alone cannot prove that a binding has not changed.
-    if (!isResolvedWithSecretRedaction(oldInputs.bindings) || !isResolvedWithSecretRedaction(newInputs.bindings))
+    if (!hasOnlyKnownRedactions(oldInputs.bindings) || !hasOnlyKnownRedactions(newInputs.bindings))
       reject("opaque-worker-inputs")
     if (
       !Array.isArray(entry.diffs) ||
@@ -216,23 +216,23 @@ function assertWorkerUpdate(entry: Record<string, unknown>, urn: string, type: s
   if (!isDeepStrictEqual(oldStable, newStable)) reject("changed-worker-bindings-or-settings")
 }
 
-function isResolvedWithSecretRedaction(value: unknown): boolean {
+function hasOnlyKnownRedactions(value: unknown): boolean {
   if (typeof value === "string") return !value.includes("[unknown]") && value !== unknownString
-  if (Array.isArray(value)) return value.every(isResolvedWithSecretRedaction)
+  if (Array.isArray(value)) return value.every(hasOnlyKnownRedactions)
   const item = record(value)
   if (!item) return true
   const keys = Object.keys(item)
   if (Object.hasOwn(item, "__pulumiUnknown")) return false
   if (keys.length === 1 && ["ciphertext", "secure"].includes(keys[0])) return false
   if (Object.hasOwn(item, pulumiSignatureProperty)) {
+    // StepEventMetadata uses SecretV1 + BlindingCrypter, not the RPC value envelope.
     return (
       item[pulumiSignatureProperty] === pulumiHiddenValueSignature &&
-      Object.hasOwn(item, "value") &&
-      keys.length === 2 &&
-      isResolvedWithSecretRedaction(item.value)
+      item.ciphertext === "[secret]" &&
+      keys.length === 2
     )
   }
-  return Object.values(item).every(isResolvedWithSecretRedaction)
+  return Object.values(item).every(hasOnlyKnownRedactions)
 }
 
 function assertWorkerUrlUpdate(entry: Record<string, unknown>, urn: string, type: string, expectedScriptName: string) {

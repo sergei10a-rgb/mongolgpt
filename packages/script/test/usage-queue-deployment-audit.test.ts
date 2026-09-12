@@ -189,10 +189,12 @@ describe("dev usage queue deployment audit", () => {
       {
         ...change(),
         diffs: ["contentSha256", "private-field"],
-        old: { inputs: { bindings: { [pulumiSignatureProperty]: pulumiHiddenValueSignature, value: "[secret]" } } },
+        old: {
+          inputs: { bindings: { [pulumiSignatureProperty]: pulumiHiddenValueSignature, ciphertext: "[secret]" } },
+        },
         new: {
           inputs: {
-            bindings: { [pulumiSignatureProperty]: pulumiHiddenValueSignature, value: "[secret]" },
+            bindings: { [pulumiSignatureProperty]: pulumiHiddenValueSignature, ciphertext: "[secret]" },
             contentFile: "04da6b54-80e4-46f7-96ec-b56ff0331ba9",
             "private-field": { secure: "private-value" },
           },
