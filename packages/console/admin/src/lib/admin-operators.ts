@@ -1,4 +1,5 @@
-import { and, asc, Database, eq, isNull } from "@mongolgpt/console-core/drizzle/index.js"
+import { and, asc, Database, eq, exists, isNull, notExists, sql } from "@mongolgpt/console-core/drizzle/index.js"
+import { paymentBatchGuard } from "@mongolgpt/console-core/payment-ledger.js"
 import {
   isPlatformAdminAssignableRole,
   normalizePlatformAdminEmail,
@@ -8,12 +9,7 @@ import { PlatformAdminTable } from "@mongolgpt/console-core/schema/admin.sql.js"
 import { ulid } from "ulid"
 import { z } from "zod"
 import type { PlatformAdminContext } from "./admin-context"
-import {
-  AdminAuthorizationError,
-  requirePlatformAdminOwner,
-  writeAdminAudit,
-  writeAdminAuditWithDb,
-} from "./admin-auth"
+import { AdminAuthorizationError, requirePlatformAdminOwner, adminAuditQuery } from "./admin-auth"
 import { loadAdminAccessConfig } from "./access"
 import { AdminMutationRequestError, requireSameOriginAdminMutation } from "./admin-mutation"
 
@@ -81,7 +77,13 @@ export async function listAdminOperators(context: PlatformAdminContext) {
   })
 }
 
-export async function mutateAdminOperator(context: PlatformAdminContext, request: Request, raw: unknown) {
+export async function mutateAdminOperator(
+  context: PlatformAdminContext,
+  request: Request,
+  raw: unknown,
+  dependencies: { batch?: typeof Database.batch; accessEmails?: ReadonlySet<string> } = {},
+) {
+  const batch = dependencies.batch ?? Database.batch
   const targetID = readOperatorID(raw)
   const action = auditAction(raw)
 
@@ -89,29 +91,28 @@ export async function mutateAdminOperator(context: PlatformAdminContext, request
     requireSameOriginAdminMutation(request)
     const admin = requirePlatformAdminOwner(context)
     const input = AdminOperatorMutationInput.parse(raw)
-    const accessEmails = loadAdminAccessConfig().bootstrapEmails
-    return await Database.transaction(async (tx) => {
-      await requireActiveOwner(tx, admin)
-      const result = await applyOperatorMutation(tx, admin, request, input, accessEmails)
-      return { ok: true as const, ...result }
-    })
+    const accessEmails = dependencies.accessEmails ?? loadAdminAccessConfig().bootstrapEmails
+    const result = await applyOperatorMutation(batch, admin, request, input, accessEmails)
+    return { ok: true as const, ...result }
   } catch (error) {
     const failure = mutationFailure(error)
     try {
-      await writeAdminAudit({
-        adminID: context.id,
-        actorEmail: context.email,
-        action,
-        outcome: failure.outcome,
-        request,
-        targetType: "platform_admin",
-        targetID,
-        metadata: { reason: failure.code },
-      })
+      await batch((tx) => [
+        adminAuditQuery(tx, {
+          adminID: context.id,
+          actorEmail: context.email,
+          action,
+          outcome: failure.outcome,
+          request,
+          targetType: "platform_admin",
+          targetID,
+          metadata: { reason: failure.code },
+        }),
+      ])
     } catch {
       return {
         ok: false as const,
-        message: "Үйлдлийг аюулгүйгээр бүртгэж чадсангүй. Ямар ч өөрчлөлт хийгдээгүй.",
+        message: "Үйлдлийн үр дүнг баталгаажуулж чадсангүй. Хуудсаа шинэчилж операторын төлөвийг шалгана уу.",
       }
     }
     return { ok: false as const, message: failure.message }
@@ -119,23 +120,40 @@ export async function mutateAdminOperator(context: PlatformAdminContext, request
 }
 
 async function applyOperatorMutation(
-  tx: Database.TxOrDb,
+  batch: typeof Database.batch,
   admin: PlatformAdminContext,
   request: Request,
   input: OperatorMutation,
   accessEmails: ReadonlySet<string>,
 ) {
+  const currentOwner = and(
+    eq(PlatformAdminTable.id, admin.id),
+    eq(PlatformAdminTable.email, admin.email),
+    eq(PlatformAdminTable.access_subject, admin.subject),
+    eq(PlatformAdminTable.role, "owner"),
+    eq(PlatformAdminTable.status, "active"),
+    isNull(PlatformAdminTable.timeDeleted),
+  )
+  const snapshot = await batch((tx) => [
+    tx.select({ id: PlatformAdminTable.id }).from(PlatformAdminTable).where(currentOwner).limit(1),
+    tx
+      .select()
+      .from(PlatformAdminTable)
+      .where(
+        input.operation === "create"
+          ? eq(PlatformAdminTable.email, input.email)
+          : and(eq(PlatformAdminTable.id, input.operatorID), isNull(PlatformAdminTable.timeDeleted)),
+      )
+      .limit(1),
+  ])
+  if (!snapshot[0][0]) throw new AdminOperatorMutationError("owner_invariant")
+  const target = snapshot[1][0]
+
   if (input.operation === "create") {
     const email = input.email
     const accessError = evaluateAdminOperatorAccessEligibility(email, accessEmails)
     if (accessError) throw new AdminOperatorMutationError(accessError)
-    const existing = await tx
-      .select({ id: PlatformAdminTable.id })
-      .from(PlatformAdminTable)
-      .where(eq(PlatformAdminTable.email, email))
-      .limit(1)
-      .then((rows) => rows[0])
-    if (existing) throw new AdminOperatorMutationError("email_exists")
+    if (target) throw new AdminOperatorMutationError("email_exists")
 
     const operator = {
       id: `adm_${ulid()}`,
@@ -148,31 +166,35 @@ async function applyOperatorMutation(
       timeUpdated: new Date(),
       timeDeleted: null,
     }
-    await tx.insert(PlatformAdminTable).values(operator)
-    await writeAdminAuditWithDb(tx, {
-      adminID: admin.id,
-      actorEmail: admin.email,
-      action: "admin.operator.create",
-      outcome: "success",
-      request,
-      targetType: "platform_admin",
-      targetID: operator.id,
-      metadata: { email, role: operator.role, status: operator.status },
-    })
+    await batch((tx) => [
+      paymentBatchGuard(
+        tx,
+        and(
+          exists(tx.select({ id: PlatformAdminTable.id }).from(PlatformAdminTable).where(currentOwner)),
+          notExists(
+            tx
+              .select({ id: PlatformAdminTable.id })
+              .from(PlatformAdminTable)
+              .where(eq(PlatformAdminTable.email, email)),
+          ),
+        ),
+      ),
+      tx.insert(PlatformAdminTable).values(operator),
+      paymentBatchGuard(tx, sql`changes() = 1`),
+      adminAuditQuery(tx, {
+        adminID: admin.id,
+        actorEmail: admin.email,
+        action: "admin.operator.create",
+        outcome: "success",
+        request,
+        targetType: "platform_admin",
+        targetID: operator.id,
+        metadata: { email, role: operator.role, status: operator.status },
+      }),
+    ])
     return { message: "Шинэ операторыг идэвхтэй эрхтэйгээр нэмлээ." }
   }
 
-  const target = await tx
-    .select({
-      id: PlatformAdminTable.id,
-      email: PlatformAdminTable.email,
-      role: PlatformAdminTable.role,
-      status: PlatformAdminTable.status,
-    })
-    .from(PlatformAdminTable)
-    .where(and(eq(PlatformAdminTable.id, input.operatorID), isNull(PlatformAdminTable.timeDeleted)))
-    .limit(1)
-    .then((rows) => rows[0])
   if (!target) throw new AdminOperatorMutationError("not_found")
   const targetMutationError = evaluateAdminOperatorTargetMutation(admin.id, target)
   if (targetMutationError) throw new AdminOperatorMutationError(targetMutationError)
@@ -182,69 +204,56 @@ async function applyOperatorMutation(
     if (accessError) throw new AdminOperatorMutationError(accessError)
   }
 
-  if (input.operation === "update_role") {
-    const updated = await tx
+  const status = input.operation === "suspend" ? "suspended" : "active"
+  const sameTarget = and(
+    eq(PlatformAdminTable.id, target.id),
+    eq(PlatformAdminTable.email, target.email),
+    eq(PlatformAdminTable.role, target.role),
+    eq(PlatformAdminTable.status, target.status),
+    eq(PlatformAdminTable.timeUpdated, target.timeUpdated),
+    target.access_subject === null
+      ? isNull(PlatformAdminTable.access_subject)
+      : eq(PlatformAdminTable.access_subject, target.access_subject),
+    isNull(PlatformAdminTable.timeDeleted),
+  )
+  // Recheck both identities inside the write batch. A monotonic timestamp fences concurrent/no-op edits.
+  await batch((tx) => [
+    paymentBatchGuard(
+      tx,
+      and(
+        exists(tx.select({ id: PlatformAdminTable.id }).from(PlatformAdminTable).where(currentOwner)),
+        exists(tx.select({ id: PlatformAdminTable.id }).from(PlatformAdminTable).where(sameTarget)),
+      ),
+    ),
+    tx
       .update(PlatformAdminTable)
-      .set({ role: input.role, timeUpdated: new Date() })
-      .where(
-        and(
-          eq(PlatformAdminTable.id, target.id),
-          eq(PlatformAdminTable.role, target.role),
-          eq(PlatformAdminTable.status, target.status),
-          isNull(PlatformAdminTable.timeDeleted),
-        ),
-      )
-    if (resultChanges(updated) !== 1) throw new AdminOperatorMutationError("conflict")
-    await writeAdminAuditWithDb(tx, {
+      .set({
+        ...(input.operation === "update_role" ? { role: input.role } : { status }),
+        timeUpdated: new Date(Math.max(Date.now(), target.timeUpdated.getTime() + 1)),
+      })
+      .where(sameTarget),
+    paymentBatchGuard(tx, sql`changes() = 1`),
+    adminAuditQuery(tx, {
       adminID: admin.id,
       actorEmail: admin.email,
-      action: "admin.operator.role_update",
+      action: input.operation === "update_role" ? "admin.operator.role_update" : `admin.operator.${input.operation}`,
       outcome: "success",
       request,
       targetType: "platform_admin",
       targetID: target.id,
-      metadata: { email: target.email, before_role: target.role, after_role: input.role },
-    })
-    return { message: "Операторын эрхийг шинэчиллээ." }
-  }
-
-  const status = input.operation === "suspend" ? "suspended" : "active"
-  const updated = await tx
-    .update(PlatformAdminTable)
-    .set({ status, timeUpdated: new Date() })
-    .where(
-      and(
-        eq(PlatformAdminTable.id, target.id),
-        eq(PlatformAdminTable.role, target.role),
-        eq(PlatformAdminTable.status, target.status),
-        isNull(PlatformAdminTable.timeDeleted),
-      ),
-    )
-  if (resultChanges(updated) !== 1) throw new AdminOperatorMutationError("conflict")
-  await writeAdminAuditWithDb(tx, {
-    adminID: admin.id,
-    actorEmail: admin.email,
-    action: `admin.operator.${input.operation}`,
-    outcome: "success",
-    request,
-    targetType: "platform_admin",
-    targetID: target.id,
-    metadata: { email: target.email, before_status: target.status, after_status: status },
-  })
+      metadata:
+        input.operation === "update_role"
+          ? { email: target.email, before_role: target.role, after_role: input.role }
+          : { email: target.email, before_status: target.status, after_status: status },
+    }),
+  ])
   return {
-    message: status === "suspended" ? "Операторын эрхийг түр түдгэлзүүллээ." : "Операторын эрхийг дахин идэвхжүүллээ.",
-  }
-}
-
-async function requireActiveOwner(tx: Database.TxOrDb, admin: PlatformAdminContext) {
-  const actor = await tx
-    .select({ id: PlatformAdminTable.id, role: PlatformAdminTable.role, status: PlatformAdminTable.status })
-    .from(PlatformAdminTable)
-    .where(and(eq(PlatformAdminTable.id, admin.id), isNull(PlatformAdminTable.timeDeleted)))
-    .limit(1)
-    .then((rows) => rows[0])
-  if (!actor || actor.role !== "owner" || actor.status !== "active") {
-    throw new AdminOperatorMutationError("owner_invariant")
+    message:
+      input.operation === "update_role"
+        ? "Операторын эрхийг шинэчиллээ."
+        : status === "suspended"
+          ? "Операторын эрхийг түр түдгэлзүүллээ."
+          : "Операторын эрхийг дахин идэвхжүүллээ.",
   }
 }
 
@@ -277,18 +286,30 @@ function auditAction(raw: unknown) {
 
 function mutationFailure(error: unknown) {
   if (error instanceof AdminMutationRequestError) {
-    return { outcome: "denied" as const, code: `request_${error.code}`, message: "Аюулгүй байдлын хүсэлтийн шалгалт амжилтгүй боллоо." }
+    return {
+      outcome: "denied" as const,
+      code: `request_${error.code}`,
+      message: "Аюулгүй байдлын хүсэлтийн шалгалт амжилтгүй боллоо.",
+    }
   }
   if (error instanceof AdminAuthorizationError) {
     return { outcome: "denied" as const, code: error.code, message: error.message }
   }
   if (error instanceof z.ZodError) {
-    return { outcome: "denied" as const, code: "invalid_input", message: "Операторын мэдээлэл эсвэл үйлдэл буруу байна." }
+    return {
+      outcome: "denied" as const,
+      code: "invalid_input",
+      message: "Операторын мэдээлэл эсвэл үйлдэл буруу байна.",
+    }
   }
   if (error instanceof AdminOperatorMutationError) {
     return { outcome: "denied" as const, code: error.code, message: operatorErrorMessage(error.code) }
   }
-  return { outcome: "failure" as const, code: "internal_error", message: "Операторын эрх өөрчлөх үед алдаа гарлаа." }
+  return {
+    outcome: "failure" as const,
+    code: "internal_error",
+    message: "Үйлдлийн үр дүн тодорхойгүй байна. Дахин оролдохын өмнө хуудсаа шинэчилж операторын төлөвийг шалгана уу.",
+  }
 }
 
 function operatorErrorMessage(code: AdminOperatorMutationError["code"]) {
@@ -321,13 +342,4 @@ export class AdminOperatorMutationError extends Error {
     super(code)
     this.name = "AdminOperatorMutationError"
   }
-}
-
-function resultChanges(result: unknown) {
-  if (!result || typeof result !== "object") return 0
-  if ("meta" in result && result.meta && typeof result.meta === "object" && "changes" in result.meta) {
-    return Number(result.meta.changes ?? 0)
-  }
-  if ("changes" in result) return Number(result.changes ?? 0)
-  return 0
 }
