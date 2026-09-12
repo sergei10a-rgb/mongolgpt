@@ -49,6 +49,8 @@ test("payment service audit is manual, owner/dev-scoped and never deploys", asyn
   expect(verification.run).toContain("test/payment-service-deployment-audit.test.ts")
   expect(verification.run).toContain("test/payment-service-deployment-guard.test.ts")
   expect(verification.run).toContain("test/payment-service-audit-workflow.test.ts")
+  expect(verification.run).toContain("test/payment-service-pulumi-args.test.ts")
+  expect(verification.run).toContain("test/payment-service-pulumi-launcher.test.ts")
   expect(verification.run).toContain("test/usage-queue-deployment-audit.test.ts")
   expect(verification.run).toContain("test/usage-queue-deployment-guard.test.ts")
   expect(preview.env?.CLOUDFLARE_ACCOUNT_ID).toBe("${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}")
@@ -58,12 +60,16 @@ test("payment service audit is manual, owner/dev-scoped and never deploys", asyn
   expect(preview.run.indexOf("exit 1")).toBeLessThan(preview.run.indexOf("bun sst diff"))
   const commands = steps.map((step) => step.run ?? "").join("\n")
   expect(commands.match(/bun sst [^\n]*/g)).toEqual([
-    'bun sst diff --stage=dev --target PaymentService --exclude Console --json --print-logs >"$diff_file" 2>"$stderr_file"; then',
+    'bun sst diff --stage=dev --target PaymentServiceScript --target PaymentServiceUrl.sst.cloudflare.WorkerUrl --json --print-logs >"$diff_file" 2>"$stderr_file"; then',
   ])
   expect(commands).toContain("umask 077")
   expect(commands).toContain('mktemp "$RUNNER_TEMP/mongolgpt-payment-diff.XXXXXX"')
   expect(commands).toContain('mktemp "$RUNNER_TEMP/mongolgpt-payment-stderr.XXXXXX"')
-  expect(commands).toContain('trap \'rm -f "$diff_file" "$stderr_file"\' EXIT')
+  expect(commands).toContain('trap \'rm -f "$diff_file" "$stderr_file" "$adapter_file"\' EXIT')
+  expect(commands).toContain('export SST_PULUMI_PATH="$adapter_file"')
+  expect(commands.indexOf("bun build script/pulumi-dev-payment.ts --compile")).toBeLessThan(
+    commands.indexOf("bun sst diff"),
+  )
   expect(commands).toContain('bun script/audit-payment-service-deployment.ts "$diff_file"')
   expect(commands).toContain('bun script/verify-payment-service-deployment.ts "$diff_file"')
   expect(commands).toContain("No payment deployment was authorized or performed")

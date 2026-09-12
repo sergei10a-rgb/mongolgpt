@@ -59,7 +59,7 @@ jobs:
 
       - name: Verify payment boundaries and disabled health contract
         run: |
-          bun test --cwd packages/script test/payment-service-deployment-guard.test.ts test/payment-service-live-check.test.ts test/payment-service-deployment-workflow.test.ts test/usage-queue-deployment-guard.test.ts
+          bun test --cwd packages/script test/payment-service-deployment-guard.test.ts test/payment-service-live-check.test.ts test/payment-service-deployment-workflow.test.ts test/payment-service-pulumi-args.test.ts test/payment-service-pulumi-launcher.test.ts test/usage-queue-deployment-guard.test.ts
           bun test --cwd packages/console/function test/payment-webhook.test.ts test/service-monitor.test.ts
 
       - name: Guard and update only the disabled dev payment worker
@@ -89,13 +89,19 @@ jobs:
           diff_file="$(mktemp "$RUNNER_TEMP/mongolgpt-payment-diff.XXXXXX")"
           stdout_file="$(mktemp "$RUNNER_TEMP/mongolgpt-payment-output.XXXXXX")"
           stderr_file="$(mktemp "$RUNNER_TEMP/mongolgpt-payment-stderr.XXXXXX")"
-          trap 'rm -f "$diff_file" "$stdout_file" "$stderr_file"' EXIT
-          if ! bun sst diff --stage=dev --target PaymentService --exclude Console --json --print-logs >"$diff_file" 2>"$stderr_file"; then
+          adapter_file="$(mktemp "$RUNNER_TEMP/mongolgpt-payment-pulumi.XXXXXX")"
+          trap 'rm -f "$diff_file" "$stdout_file" "$stderr_file" "$adapter_file"' EXIT
+          if ! bun build script/pulumi-dev-payment.ts --compile --outfile "$adapter_file" >"$stderr_file" 2>&1; then
+            echo "Scoped dev payment launcher build failed."
+            exit 1
+          fi
+          export SST_PULUMI_PATH="$adapter_file"
+          if ! bun sst diff --stage=dev --target PaymentServiceScript --target PaymentServiceUrl.sst.cloudflare.WorkerUrl --json --print-logs >"$diff_file" 2>"$stderr_file"; then
             echo "Disabled dev payment preview failed; private output was not printed."
             exit 1
           fi
           bun script/verify-payment-service-deployment.ts "$diff_file"
-          if ! bun sst deploy --stage=dev --target PaymentService --exclude Console --print-logs >"$stdout_file" 2>"$stderr_file"; then
+          if ! bun sst deploy --stage=dev --target PaymentServiceScript --target PaymentServiceUrl.sst.cloudflare.WorkerUrl --print-logs >"$stdout_file" 2>"$stderr_file"; then
             echo "Disabled dev payment deployment failed; inspect current state before retrying. Private output was not printed."
             exit 1
           fi

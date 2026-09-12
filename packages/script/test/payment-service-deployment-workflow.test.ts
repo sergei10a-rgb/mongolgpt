@@ -58,6 +58,8 @@ test("payment deployment is manually confirmed, disabled, owner/dev-only and gua
     "payment-service-deployment-guard",
     "payment-service-live-check",
     "payment-service-deployment-workflow",
+    "payment-service-pulumi-args",
+    "payment-service-pulumi-launcher",
     "usage-queue-deployment-guard",
     "payment-webhook",
     "service-monitor",
@@ -68,10 +70,12 @@ test("payment deployment is manually confirmed, disabled, owner/dev-only and gua
   expect(commands).toContain('"$MONGOLGPT_DOMAIN" != "mgpt.mn"')
   expect(commands).toContain("set -euo pipefail")
   expect(commands).toContain("umask 077")
-  expect(commands).toContain('trap \'rm -f "$diff_file" "$stdout_file" "$stderr_file"\' EXIT')
+  expect(commands).toContain('trap \'rm -f "$diff_file" "$stdout_file" "$stderr_file" "$adapter_file"\' EXIT')
   const ordered = [
     "exit 1",
     "bun script/check-dev-payment-service.ts before",
+    "bun build script/pulumi-dev-payment.ts --compile",
+    'export SST_PULUMI_PATH="$adapter_file"',
     "bun sst diff",
     "bun script/verify-payment-service-deployment.ts",
     "bun sst deploy",
@@ -80,8 +84,8 @@ test("payment deployment is manually confirmed, disabled, owner/dev-only and gua
   expect(ordered.every((index) => index >= 0)).toBe(true)
   expect(ordered).toEqual([...ordered].sort((left, right) => left - right))
   expect(commands.match(/bun sst [^\n]*/g)).toEqual([
-    'bun sst diff --stage=dev --target PaymentService --exclude Console --json --print-logs >"$diff_file" 2>"$stderr_file"; then',
-    'bun sst deploy --stage=dev --target PaymentService --exclude Console --print-logs >"$stdout_file" 2>"$stderr_file"; then',
+    'bun sst diff --stage=dev --target PaymentServiceScript --target PaymentServiceUrl.sst.cloudflare.WorkerUrl --json --print-logs >"$diff_file" 2>"$stderr_file"; then',
+    'bun sst deploy --stage=dev --target PaymentServiceScript --target PaymentServiceUrl.sst.cloudflare.WorkerUrl --print-logs >"$stdout_file" 2>"$stderr_file"; then',
   ])
   expect(commands).not.toMatch(/sst (?:remove|state|refresh|unlock|secret|shell)|--decrypt|curl|wrangler|cat /)
   expect(source).not.toMatch(/continue-on-error|upload-artifact|REAL_PAYMENT_CONFIRMATION|secrets\.(?:QPAY|BONUM)/)
