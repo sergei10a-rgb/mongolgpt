@@ -297,6 +297,7 @@ describe("Cloudflare admin Access deployment verification", () => {
       hostname: "admin.dev.mgpt.mn",
       stage: "dev",
       bootstrapEmails: "ADMIN@example.com, owner@example.com",
+      applicationId: "11111111-2222-4333-8444-555555555555",
       fetcher: async (input) => {
         requests.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url)
         return responses.shift()!
@@ -331,6 +332,29 @@ describe("Cloudflare admin Access deployment verification", () => {
     expect(error).toBeInstanceOf(CloudflareAccessPreflightError)
     expect(String(error)).toContain("same_site_cookie_attribute")
     expect(String(error)).not.toContain("must-not-leak")
+  })
+
+  test("rejects a different live application ID before reading its policy", async () => {
+    const responses = [organizationResponse(), response({ success: true, result: [adminApplication()] })]
+    const methods: (string | undefined)[] = []
+    const error = await rejection(
+      verifyCloudflareAdminAccess({
+        accountId: "account-id",
+        token: "must-not-leak",
+        applicationId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        hostname: "admin.dev.mgpt.mn",
+        stage: "dev",
+        bootstrapEmails: "admin@example.com",
+        fetcher: async (_, init) => {
+          methods.push(init?.method)
+          return responses.shift()!
+        },
+      }),
+    )
+    expect(error).toBeInstanceOf(CloudflareAccessPreflightError)
+    expect(String(error)).toContain("application ID")
+    expect(String(error)).not.toContain("must-not-leak")
+    expect(methods).toEqual([undefined, undefined])
   })
 
   test("rejects broad policies, duplicate apps, and weakened MFA without leaking credentials", async () => {

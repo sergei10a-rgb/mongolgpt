@@ -136,6 +136,7 @@ export async function configureCloudflareAccessMfa(input: {
 
 export async function verifyCloudflareAdminAccess(input: {
   accountId: string
+  applicationId?: string
   token: string
   hostname: string
   stage: string
@@ -194,6 +195,9 @@ export async function verifyCloudflareAdminAccess(input: {
   const applicationId = typeof application.id === "string" ? application.id.trim() : ""
   if (!/^[0-9a-f-]{32,36}$/i.test(applicationId)) {
     throw new CloudflareAccessPreflightError("Admin Access application ID хүчинтэй биш байна.")
+  }
+  if (input.applicationId !== undefined && applicationId !== input.applicationId) {
+    throw new CloudflareAccessPreflightError("Admin Access application ID баталгаажсан нөөцтэй таарахгүй байна.")
   }
   const policies = await requestCloudflare(
     fetcher,
