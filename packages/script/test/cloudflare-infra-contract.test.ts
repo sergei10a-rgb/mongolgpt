@@ -1316,9 +1316,15 @@ describe("Cloudflare hosted infrastructure contract", () => {
     }
     const job = parseWorkflowJob(parsed.jobs.rehearse, "rehearse")
     const confirmation = job.steps.find((step) => step.name === "Validate exact dev rehearsal confirmation")
+    const credentials = job.steps.find((step) => step.name === "Validate rehearsal credentials before any mutation")
     const deploy = job.steps.find((step) => step.name === "Deploy only dev D1 backup automation")
     const backup = job.steps.find((step) => step.name === "Trigger a fresh dev backup and wait for completion")
     const restore = job.steps.find((step) => step.name === "Restore fresh backup into disposable dev D1")
+    if (!confirmation || !credentials || !deploy || !backup || !restore) {
+      throw new Error("D1 backup/restore rehearsal workflow is missing a required step")
+    }
+    if (typeof credentials.run !== "string") throw new Error("D1 rehearsal credential step has no shell command")
+    const credentialRun = credentials.run
 
     expect(Object.keys(parsed.on)).toEqual(["workflow_dispatch"])
     expect(parsed.permissions).toEqual({ contents: "read" })
@@ -1326,10 +1332,61 @@ describe("Cloudflare hosted infrastructure contract", () => {
     expect(record(parsed.env) ? parsed.env.MONGOLGPT_DEPLOY_D1_BACKUP_ONLY : undefined).toBe("true")
     expect(record(parsed.env) ? parsed.env.MONGOLGPT_ENABLE_D1_BACKUPS : undefined).toBe("true")
     expect(record(parsed.env) ? parsed.env.MONGOLGPT_ENABLE_REAL_PAYMENTS : undefined).toBe("false")
-    expect(confirmation?.run).toContain('"DEV D1 НӨӨЦЛӨЛТ БА СЭРГЭЭЛТИЙГ ШАЛГА"')
-    expect(deploy?.run).toContain("--target D1BackupSchedule")
-    expect(backup?.run).toContain("script/d1-backup-rehearsal.ts")
-    expect(restore?.run).toContain("env -u CLOUDFLARE_API_TOKEN bun script/d1-restore-drill.ts")
+    expect(confirmation.run).toContain('"DEV D1 НӨӨЦЛӨЛТ БА СЭРГЭЭЛТИЙГ ШАЛГА"')
+    expect(credentials.env).toEqual({
+      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+      D1_BACKUP_API_TOKEN: "${{ secrets.D1_BACKUP_API_TOKEN }}",
+      D1_RESTORE_DRILL_API_TOKEN: "${{ secrets.D1_RESTORE_DRILL_API_TOKEN }}",
+    })
+    expect(credentialRun).toContain('if [[ -z "${CLOUDFLARE_API_TOKEN//[[:space:]]/}" ]]')
+    expect(credentialRun).toContain('if [[ -z "${D1_BACKUP_API_TOKEN//[[:space:]]/}" ]]')
+    expect(credentialRun).toContain('if [[ -z "${D1_RESTORE_DRILL_API_TOKEN//[[:space:]]/}" ]]')
+    expect(credentialRun).toContain("дутуу байна")
+    expect(credentialRun).not.toContain("echo $CLOUDFLARE_API_TOKEN")
+    expect(credentialRun).not.toContain("echo $D1_BACKUP_API_TOKEN")
+    expect(credentialRun).not.toContain("echo $D1_RESTORE_DRILL_API_TOKEN")
+    const shell = process.platform === "win32" ? "C:\\Program Files\\Git\\bin\\bash.exe" : "bash"
+    const validCredentials = {
+      CLOUDFLARE_API_TOKEN: "synthetic-cloudflare",
+      D1_BACKUP_API_TOKEN: "synthetic-backup",
+      D1_RESTORE_DRILL_API_TOKEN: "synthetic-restore",
+    }
+    const cases = Object.keys(validCredentials).flatMap((name) =>
+      [undefined, "", " \t\r\n"].map((value) => ({
+        env: { ...validCredentials, [name]: value },
+        expected: 1,
+        missing: name,
+      })),
+    )
+    for (const testCase of [...cases, { env: validCredentials, expected: 0, missing: "" }]) {
+      const child = Bun.spawn([shell, "-c", credentialRun], {
+        env: testCase.env,
+        stdout: "pipe",
+        stderr: "pipe",
+      })
+      const [exitCode, stdout, stderr] = await Promise.all([
+        child.exited,
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+      ])
+      expect(exitCode).toBe(testCase.expected)
+      expect(stderr).toBe("")
+      expect(stdout).not.toContain("synthetic-")
+      expect(stdout.trim()).toBe(testCase.missing ? `Dev D1 rehearsal: ${testCase.missing} дутуу байна.` : "")
+    }
+    expect(job.steps.indexOf(credentials)).toBeLessThan(job.steps.findIndex((step) => step.name === "Setup Bun"))
+    expect(job.steps.indexOf(credentials)).toBeLessThan(
+      job.steps.findIndex((step) => step.name === "Checkout repository"),
+    )
+    expect(job.steps.indexOf(credentials)).toBeLessThan(job.steps.indexOf(deploy))
+    expect(job.steps.indexOf(credentials)).toBeLessThan(job.steps.indexOf(backup))
+    expect(job.steps.indexOf(credentials)).toBeLessThan(job.steps.indexOf(restore))
+    expect(deploy.run?.trim()).toBe(
+      "bun sst deploy --stage=dev --target D1Backups,D1BackupRetention,D1BackupWorkflow,D1BackupSchedule,D1BackupScheduleHandler --print-logs",
+    )
+    expect(deploy.run).not.toContain("--target Database")
+    expect(backup.run).toContain("script/d1-backup-rehearsal.ts")
+    expect(restore.run).toContain("env -u CLOUDFLARE_API_TOKEN bun script/d1-restore-drill.ts")
     expect(source).toContain("D1_RESTORE_DRILL_API_TOKEN: ${{ secrets.D1_RESTORE_DRILL_API_TOKEN }}")
     expect(source).toContain("SST_SECRET_D1BackupApiToken: ${{ secrets.D1_BACKUP_API_TOKEN }}")
     expect(source).not.toContain("stage=production")
