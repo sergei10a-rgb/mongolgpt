@@ -393,8 +393,14 @@ export async function recordEstimatedModelCostWithDb(
   db: Database.TxOrDb,
   input: z.input<typeof EstimatedModelCostSchema>,
 ) {
+  const entry = await prepareEstimatedModelCost(input)
+  if (!entry) return { kind: "skipped" as const }
+  return recordFinanceCostEntryWithDb(db, entry)
+}
+
+export async function prepareEstimatedModelCost(input: z.input<typeof EstimatedModelCostSchema>) {
   const cost = EstimatedModelCostSchema.parse(input)
-  if (cost.plan === "byok" || cost.costUSDInMicrocents === 0) return { kind: "skipped" as const }
+  if (cost.plan === "byok" || cost.costUSDInMicrocents === 0) return undefined
 
   const payload = {
     version: 1,
@@ -405,7 +411,7 @@ export async function recordEstimatedModelCostWithDb(
     costUSDInMicrocents: cost.costUSDInMicrocents,
     effectiveAt: cost.effectiveAt,
   }
-  return recordFinanceCostEntryWithDb(db, {
+  return RecordFinanceCostEntrySchema.parse({
     workspaceID: cost.workspaceID,
     category: "model_cost",
     direction: "debit",

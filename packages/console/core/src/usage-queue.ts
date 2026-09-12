@@ -1,9 +1,15 @@
-import { and, eq, sql } from "drizzle-orm"
+import { and, eq, exists, notExists, or, sql, type SQL } from "drizzle-orm"
 import { Database } from "./drizzle"
-import { BillingTable, UsageTable } from "./schema/billing.sql"
+import { BillingTable, FinanceCostEntryTable, UsageTable } from "./schema/billing.sql"
 import { UserTable } from "./schema/user.sql"
 import { UsageQueueEventSchema, type UsageQueueEvent } from "./quota"
-import { recordEstimatedModelCostWithDb } from "./finance-ledger"
+import {
+  financeCostEntryValues,
+  financeRowMatches,
+  prepareEstimatedModelCost,
+  recordEstimatedModelCostWithDb,
+} from "./finance-ledger"
+import { paymentBatchGuard } from "./payment-ledger"
 
 function resultChanges(result: unknown) {
   if (!result || typeof result !== "object") return 0
@@ -23,36 +29,7 @@ function monthBounds(timestamp: number) {
 
 export async function persistUsageQueueEventWithDb(db: Database.TxOrDb, input: UsageQueueEvent) {
   const event = UsageQueueEventSchema.parse(input)
-  const timeCreated = new Date(event.timeCreated)
-  const month = monthBounds(event.timeCreated)
-  const inserted = await db
-    .insert(UsageTable)
-    .values({
-      id: event.id,
-      workspaceID: event.workspaceID,
-      timeCreated,
-      timeUpdated: timeCreated,
-      model: event.usage.model,
-      provider: event.usage.provider,
-      inputTokens: event.usage.inputTokens,
-      outputTokens: event.usage.outputTokens,
-      reasoningTokens: event.usage.reasoningTokens,
-      cacheReadTokens: event.usage.cacheReadTokens,
-      cacheWrite5mTokens: event.usage.cacheWrite5mTokens,
-      cacheWrite1hTokens: event.usage.cacheWrite1hTokens,
-      cost: event.usage.cost,
-      inputCost: event.usage.inputCost,
-      outputCost: event.usage.outputCost,
-      cacheReadCost: event.usage.cacheReadCost,
-      cacheWriteCost: event.usage.cacheWriteCost,
-      country: event.usage.country,
-      continent: event.usage.continent,
-      userID: event.userID,
-      keyID: event.usage.keyID,
-      sessionID: event.usage.sessionID,
-      enrichment: event.usage.enrichment,
-    })
-    .onConflictDoNothing()
+  const inserted = await db.insert(UsageTable).values(usageValues(event)).onConflictDoNothing()
 
   if (resultChanges(inserted) === 0) {
     const stored = await db
@@ -84,7 +61,17 @@ export async function persistUsageQueueEventWithDb(db: Database.TxOrDb, input: U
     plan: event.usage.enrichment?.plan,
   })
 
-  const billing = await db
+  const billing = await billingUsageQuery(db, event)
+  const user = await userUsageQuery(db, event)
+  if (resultChanges(billing) !== 1 || resultChanges(user) !== 1) {
+    throw new Error(`Хэрэглээний үйл явдал ${event.id} байхгүй төлбөр тооцоо эсвэл хэрэглэгчийн мөрийг зааж байна`)
+  }
+  return "inserted" as const
+}
+
+function billingUsageQuery(db: Database.TxOrDb, event: UsageQueueEvent, condition?: SQL) {
+  const month = monthBounds(event.timeCreated)
+  return db
     .update(BillingTable)
     .set({
       balance: sql`${BillingTable.balance} - ${event.workspaceCost}`,
@@ -108,9 +95,12 @@ export async function persistUsageQueueEventWithDb(db: Database.TxOrDb, input: U
         END
       `,
     })
-    .where(eq(BillingTable.workspaceID, event.workspaceID))
+    .where(and(eq(BillingTable.workspaceID, event.workspaceID), condition))
+}
 
-  const user = await db
+function userUsageQuery(db: Database.TxOrDb, event: UsageQueueEvent, condition?: SQL) {
+  const month = monthBounds(event.timeCreated)
+  return db
     .update(UserTable)
     .set({
       monthlyUsage: sql`
@@ -133,16 +123,90 @@ export async function persistUsageQueueEventWithDb(db: Database.TxOrDb, input: U
         END
       `,
     })
-    .where(and(eq(UserTable.workspaceID, event.workspaceID), eq(UserTable.id, event.userID)))
-
-  if (resultChanges(billing) !== 1 || resultChanges(user) !== 1) {
-    throw new Error(`Хэрэглээний үйл явдал ${event.id} байхгүй төлбөр тооцоо эсвэл хэрэглэгчийн мөрийг зааж байна`)
-  }
-  return "inserted" as const
+    .where(and(eq(UserTable.workspaceID, event.workspaceID), eq(UserTable.id, event.userID), condition))
 }
 
-export function persistUsageQueueEvent(input: UsageQueueEvent) {
-  return Database.transaction((db) => persistUsageQueueEventWithDb(db, input))
+export async function persistUsageQueueEvent(
+  input: UsageQueueEvent,
+  dependencies: { batch?: typeof Database.batch } = {},
+) {
+  const event = UsageQueueEventSchema.parse(input)
+  const values = usageValues(event)
+  const { timeUpdated, ...replay } = values
+  const cost = await prepareEstimatedModelCost({
+    workspaceID: event.workspaceID,
+    usageID: event.id,
+    provider: event.usage.provider,
+    model: event.usage.model,
+    costUSDInMicrocents: event.usage.cost,
+    effectiveAt: event.timeCreated,
+    plan: event.usage.enrichment?.plan,
+  })
+  const costValues = cost ? financeCostEntryValues(cost, null) : undefined
+  const result = await (dependencies.batch ?? Database.batch)((db) => {
+    const usage = db
+      .select()
+      .from(UsageTable)
+      .where(and(eq(UsageTable.workspaceID, event.workspaceID), eq(UsageTable.id, event.id)))
+    const billing = db.select().from(BillingTable).where(eq(BillingTable.workspaceID, event.workspaceID))
+    const user = db
+      .select()
+      .from(UserTable)
+      .where(and(eq(UserTable.workspaceID, event.workspaceID), eq(UserTable.id, event.userID)))
+    const costQueries = (() => {
+      if (!costValues) return []
+      const { id, ...expected } = costValues
+      return [
+        db
+          .insert(FinanceCostEntryTable)
+          .values({ id, ...expected })
+          .onConflictDoNothing(),
+        paymentBatchGuard(
+          db,
+          exists(db.select().from(FinanceCostEntryTable).where(financeRowMatches(FinanceCostEntryTable, expected))),
+        ),
+      ]
+    })()
+    return [
+      paymentBatchGuard(db, or(exists(usage), and(exists(billing), exists(user)))),
+      // Updates precede the insert: all share the same absence test in one atomic batch.
+      billingUsageQuery(db, event, notExists(usage)),
+      userUsageQuery(db, event, notExists(usage)),
+      db.insert(UsageTable).values(values).onConflictDoNothing(),
+      paymentBatchGuard(db, exists(db.select().from(UsageTable).where(financeRowMatches(UsageTable, replay)))),
+      ...costQueries,
+    ]
+  })
+  return resultChanges(result[3]) === 0 ? ("duplicate" as const) : ("inserted" as const)
+}
+
+function usageValues(event: UsageQueueEvent) {
+  const timeCreated = new Date(event.timeCreated)
+  return {
+    id: event.id,
+    workspaceID: event.workspaceID,
+    timeCreated,
+    timeUpdated: timeCreated,
+    model: event.usage.model,
+    provider: event.usage.provider,
+    inputTokens: event.usage.inputTokens,
+    outputTokens: event.usage.outputTokens,
+    reasoningTokens: event.usage.reasoningTokens ?? null,
+    cacheReadTokens: event.usage.cacheReadTokens ?? null,
+    cacheWrite5mTokens: event.usage.cacheWrite5mTokens ?? null,
+    cacheWrite1hTokens: event.usage.cacheWrite1hTokens ?? null,
+    cost: event.usage.cost,
+    inputCost: event.usage.inputCost ?? null,
+    outputCost: event.usage.outputCost ?? null,
+    cacheReadCost: event.usage.cacheReadCost ?? null,
+    cacheWriteCost: event.usage.cacheWriteCost ?? null,
+    country: event.usage.country ?? null,
+    continent: event.usage.continent ?? null,
+    userID: event.userID,
+    keyID: event.usage.keyID ?? null,
+    sessionID: event.usage.sessionID ?? null,
+    enrichment: event.usage.enrichment ?? null,
+  }
 }
 
 function assertUsageReplay(stored: typeof UsageTable.$inferSelect, replay: UsageQueueEvent) {
