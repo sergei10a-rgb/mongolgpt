@@ -4,11 +4,12 @@ import { For, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
 import { listAdminAudit } from "~/lib/admin-audit"
 import { getPlatformAdminContext } from "~/lib/admin-context"
+import { adminResponse } from "~/lib/admin-response"
 
 export const adminAuditQuery = query(
   async (input: { q?: string; outcome?: string; cursor?: string; limit?: number }) => {
     "use server"
-    return listAdminAudit(getPlatformAdminContext(), input)
+    return adminResponse(() => listAdminAudit(getPlatformAdminContext(), input))
   },
   "admin.audit.list",
 )

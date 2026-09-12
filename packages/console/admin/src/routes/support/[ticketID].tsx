@@ -4,6 +4,8 @@ import { ErrorBoundary, For, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 import { getAdminSupportTicketDetail, listAssignableSupportAdmins } from "~/lib/admin-support"
+import { adminResponse } from "~/lib/admin-response"
+import { AdminActionMessage } from "~/component/admin-action-message"
 import {
   adminSupportQueryKey,
   categoryLabel,
@@ -17,17 +19,19 @@ import {
 
 export const adminSupportTicketQuery = query(async (ticketID: string) => {
   "use server"
-  const context = getPlatformAdminContext()
-  const [detail, assignableAdmins] = await Promise.all([
-    getAdminSupportTicketDetail(context, ticketID),
-    listAssignableSupportAdmins(context),
-  ])
-  return {
-    admin: context,
-    canManage: context.permissions.includes("support.manage"),
-    assignableAdmins,
-    ...detail,
-  }
+  return adminResponse(async () => {
+    const context = getPlatformAdminContext()
+    const [detail, assignableAdmins] = await Promise.all([
+      getAdminSupportTicketDetail(context, ticketID),
+      listAssignableSupportAdmins(context),
+    ])
+    return {
+      admin: context,
+      canManage: context.permissions.includes("support.manage"),
+      assignableAdmins,
+      ...detail,
+    }
+  })
 }, adminSupportQueryKey)
 
 export default function AdminSupportTicketPage() {
@@ -49,7 +53,7 @@ export default function AdminSupportTicketPage() {
           }
         >
           {(data) => {
-            const current = data().ticket
+            const current = () => data().ticket
             return (
               <>
                 <AdminHeader admin={data().admin} active="support" />
@@ -57,25 +61,14 @@ export default function AdminSupportTicketPage() {
                   <section data-component="page-heading">
                     <div>
                       <p data-component="eyebrow">
-                        <A href="/support">Тусламжийн хүсэлт</A> / {current.id}
+                        <A href="/support">Тусламжийн хүсэлт</A> / {current().id}
                       </p>
-                      <h1>{current.subject}</h1>
+                      <h1>{current().subject}</h1>
                     </div>
                     <span data-component="read-only">{data().canManage ? "Удирдах эрхтэй" : "Зөвхөн харах горим"}</span>
                   </section>
 
-                  <Show when={submission.result}>
-                    {(result) => (
-                      <p
-                        data-component="action-message"
-                        data-outcome={result().ok ? "success" : "failure"}
-                        role={result().ok ? "status" : "alert"}
-                        aria-live="polite"
-                      >
-                        {result().message}
-                      </p>
-                    )}
-                  </Show>
+                  <AdminActionMessage result={submission.result} error={submission.error} />
 
                   <section data-component="support-detail" aria-labelledby="ticket-information-title">
                     <div data-component="section-heading">
@@ -87,48 +80,48 @@ export default function AdminSupportTicketPage() {
                       <div>
                         <dt>Аккаунт</dt>
                         <dd>
-                          <code>{current.account_id}</code>
+                          <code>{current().account_id}</code>
                         </dd>
                       </div>
                       <div>
                         <dt>Холбоо барих имэйл</dt>
-                        <dd>{current.requester_email}</dd>
+                        <dd>{current().requester_email}</dd>
                       </div>
                       <div>
                         <dt>Ажлын орон зай</dt>
-                        <dd>{current.workspace_id ? <code>{current.workspace_id}</code> : "Холбоогүй"}</dd>
+                        <dd>{current().workspace_id ? <code>{current().workspace_id}</code> : "Холбоогүй"}</dd>
                       </div>
                       <div>
                         <dt>Ангилал</dt>
-                        <dd>{categoryLabel(current.category)}</dd>
+                        <dd>{categoryLabel(current().category)}</dd>
                       </div>
                       <div>
                         <dt>Төлөв</dt>
-                        <dd>{statusLabel(current.status)}</dd>
+                        <dd>{statusLabel(current().status)}</dd>
                       </div>
                       <div>
                         <dt>Тэргүүлэх зэрэг</dt>
-                        <dd>{priorityLabel(current.priority)}</dd>
+                        <dd>{priorityLabel(current().priority)}</dd>
                       </div>
                       <div>
                         <dt>Хариуцсан админ</dt>
-                        <dd>{assignedLabel(current.assigned_admin_id, data().assignableAdmins)}</dd>
+                        <dd>{assignedLabel(current().assigned_admin_id, data().assignableAdmins)}</dd>
                       </div>
                       <div>
                         <dt>Үүссэн</dt>
-                        <dd>{formatDate(current.time_created)}</dd>
+                        <dd>{formatDate(current().time_created)}</dd>
                       </div>
                       <div>
                         <dt>Сүүлд идэвхтэй</dt>
-                        <dd>{formatDate(current.last_message_at)}</dd>
+                        <dd>{formatDate(current().last_message_at)}</dd>
                       </div>
                       <div>
                         <dt>Шийдсэн</dt>
-                        <dd>{formatDate(current.time_resolved)}</dd>
+                        <dd>{formatDate(current().time_resolved)}</dd>
                       </div>
                       <div>
                         <dt>Хаасан</dt>
-                        <dd>{formatDate(current.time_closed)}</dd>
+                        <dd>{formatDate(current().time_closed)}</dd>
                       </div>
                     </dl>
                   </section>
@@ -169,23 +162,23 @@ export default function AdminSupportTicketPage() {
                         aria-label="Хүсэлтийн төлөв, зэрэг, хариуцалтыг шинэчлэх"
                       >
                         <input type="hidden" name="operation" value="update" />
-                        <input type="hidden" name="ticketID" value={current.id} />
-                        <input type="hidden" name="expectedLockVersion" value={current.lock_version} />
+                        <input type="hidden" name="ticketID" value={current().id} />
+                        <input type="hidden" name="expectedLockVersion" value={current().lock_version} />
                         <label>
                           <span>Төлөв</span>
-                          <select name="status" value={current.status}>
-                            <StatusOptions current={current.status} />
+                          <select name="status" value={current().status}>
+                            <StatusOptions current={current().status} />
                           </select>
                         </label>
                         <label>
                           <span>Тэргүүлэх зэрэг</span>
-                          <select name="priority" value={current.priority}>
+                          <select name="priority" value={current().priority}>
                             <PriorityOptions />
                           </select>
                         </label>
                         <label>
                           <span>Хариуцсан админ</span>
-                          <select name="assignedAdminID" value={current.assigned_admin_id ?? "__unassigned"}>
+                          <select name="assignedAdminID" value={current().assigned_admin_id ?? "__unassigned"}>
                             <option value="__unassigned">Оноогоогүй</option>
                             <For each={data().assignableAdmins}>
                               {(admin) => <option value={admin.id}>{admin.email}</option>}
@@ -197,7 +190,7 @@ export default function AdminSupportTicketPage() {
                         </button>
                       </form>
                       <div data-component="support-composer-grid">
-                        <Show when={current.status !== "resolved" && current.status !== "closed"}>
+                        <Show when={current().status !== "resolved" && current().status !== "closed"}>
                           <form
                             action={mutateAdminSupportAction}
                             method="post"
@@ -205,8 +198,8 @@ export default function AdminSupportTicketPage() {
                             aria-label="Хэрэглэгчид харагдах хариу илгээх"
                           >
                             <input type="hidden" name="operation" value="reply" />
-                            <input type="hidden" name="ticketID" value={current.id} />
-                            <input type="hidden" name="expectedLockVersion" value={current.lock_version} />
+                            <input type="hidden" name="ticketID" value={current().id} />
+                            <input type="hidden" name="expectedLockVersion" value={current().lock_version} />
                             <label>
                               <span>Хэрэглэгчид харагдах хариу</span>
                               <textarea
@@ -229,8 +222,8 @@ export default function AdminSupportTicketPage() {
                           aria-label="Зөвхөн дотоод тэмдэглэл нэмэх"
                         >
                           <input type="hidden" name="operation" value="note" />
-                          <input type="hidden" name="ticketID" value={current.id} />
-                          <input type="hidden" name="expectedLockVersion" value={current.lock_version} />
+                          <input type="hidden" name="ticketID" value={current().id} />
+                          <input type="hidden" name="expectedLockVersion" value={current().lock_version} />
                           <label>
                             <span>Дотоод тэмдэглэл</span>
                             <textarea

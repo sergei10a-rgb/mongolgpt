@@ -1,22 +1,24 @@
 import { Title } from "@solidjs/meta"
-import { action, createAsync, json, query, useSubmission } from "@solidjs/router"
+import { action, createAsync, query, useSubmission } from "@solidjs/router"
 import { getRequestEvent } from "solid-js/web"
 import { For, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 import { listAdminPlans, mutateAdminPlans } from "~/lib/admin-plans"
+import { adminResponse } from "~/lib/admin-response"
+import { AdminActionMessage } from "~/component/admin-action-message"
 
 export const adminPlansQuery = query(async () => {
   "use server"
-  return listAdminPlans(getPlatformAdminContext())
+  return adminResponse(() => listAdminPlans(getPlatformAdminContext()))
 }, "admin.plans.list")
 
 export const mutateAdminPlansAction = action(async (form: FormData) => {
   "use server"
-  const event = getRequestEvent()
-  if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
-  return json(await mutateAdminPlans(getPlatformAdminContext(), event.request, Object.fromEntries(form.entries())), {
-    revalidate: adminPlansQuery.key,
+  return adminResponse(async () => {
+    const event = getRequestEvent()
+    if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
+    return mutateAdminPlans(getPlatformAdminContext(), event.request, Object.fromEntries(form.entries()))
   })
 }, "admin.plans.mutate")
 
@@ -39,7 +41,7 @@ export default function AdminPlansPage() {
       <Title>Төлөвлөгөөний удирдлага | MongolGPT</Title>
       <Show when={plans()} fallback={<Loading />}>
         {(data) => {
-          const limits = data().active.limits
+          const limits = () => data().active.limits
           return (
             <>
               <AdminHeader admin={data().admin} active="plans" />
@@ -56,18 +58,7 @@ export default function AdminPlansPage() {
                   </span>
                 </section>
 
-                <Show when={submission.result}>
-                  {(result) => (
-                    <p
-                      data-component="action-message"
-                      data-outcome={result().ok ? "success" : "failure"}
-                      role={result().ok ? "status" : "alert"}
-                      aria-live="polite"
-                    >
-                      {result().message}
-                    </p>
-                  )}
-                </Show>
+                <AdminActionMessage result={submission.result} error={submission.error} />
 
                 <section data-component="plan-state" aria-labelledby="plan-state-title">
                   <div>
@@ -118,20 +109,24 @@ export default function AdminPlansPage() {
                       <NumberField
                         name="free.promoTokens"
                         label="Урамшууллын токен"
-                        value={limits.free.promoTokens}
+                        value={limits().free.promoTokens}
                         min="0"
                       />
-                      <NumberField name="free.dailyRequests" label="Өдрийн хүсэлт" value={limits.free.dailyRequests} />
+                      <NumberField
+                        name="free.dailyRequests"
+                        label="Өдрийн хүсэлт"
+                        value={limits().free.dailyRequests}
+                      />
                       <NumberField
                         name="free.dailyRequestsFallback"
                         label="Нөөц өдрийн хүсэлт"
-                        value={limits.free.dailyRequestsFallback}
+                        value={limits().free.dailyRequestsFallback}
                       />
                     </div>
                   </fieldset>
-                  <TierFields title="Үндсэн (Basic)" prefix="basic" values={limits.plans.basic} />
-                  <TierFields title="Про (Pro)" prefix="pro" values={limits.plans.pro} />
-                  <TierFields title="Дээд (Max)" prefix="max" values={limits.plans.max} />
+                  <TierFields title="Үндсэн (Basic)" prefix="basic" values={limits().plans.basic} />
+                  <TierFields title="Про (Pro)" prefix="pro" values={limits().plans.pro} />
+                  <TierFields title="Дээд (Max)" prefix="max" values={limits().plans.max} />
                   <label data-component="plan-note">
                     <span>Монгол тайлбар</span>
                     <textarea

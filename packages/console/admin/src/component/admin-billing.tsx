@@ -1,4 +1,4 @@
-import { A, action, json, useSubmission } from "@solidjs/router"
+import { A, action, useSubmission } from "@solidjs/router"
 import { For, Show } from "solid-js"
 import { getRequestEvent } from "solid-js/web"
 import type { FinanceMarginUnavailableReason } from "@mongolgpt/console-core/finance-reporting.js"
@@ -6,45 +6,36 @@ import type { PlatformAdminContext } from "~/lib/admin-context"
 import { AdminHeader } from "./admin-header"
 import { cancelAdminSubscriptionCheckout, refundAdminSubscriptionPayment } from "~/lib/admin-billing"
 import { retryAdminPaymentRecovery } from "~/lib/admin-payment-recovery"
-import { adminPaymentRecoveryQueryKey } from "~/lib/admin-payment-recovery-query"
 import { adminInvoiceStatusTime } from "~/lib/admin-billing-display"
-import { adminBillingQuery } from "~/lib/admin-billing-query"
 import { getPlatformAdminContext } from "~/lib/admin-context"
+import { adminResponse } from "~/lib/admin-response"
+import { AdminActionMessage } from "./admin-action-message"
 
 export const cancelAdminSubscriptionCheckoutAction = action(async (form: FormData) => {
   "use server"
-  const event = getRequestEvent()
-  if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
-  const result = await cancelAdminSubscriptionCheckout(
-    getPlatformAdminContext(),
-    event.request,
-    Object.fromEntries(form.entries()),
-  )
-  return json(result, { revalidate: adminBillingQuery.key })
+  return adminResponse(async () => {
+    const event = getRequestEvent()
+    if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
+    return cancelAdminSubscriptionCheckout(getPlatformAdminContext(), event.request, Object.fromEntries(form.entries()))
+  })
 }, "admin.billing.cancel")
 
 export const refundAdminSubscriptionPaymentAction = action(async (form: FormData) => {
   "use server"
-  const event = getRequestEvent()
-  if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
-  const result = await refundAdminSubscriptionPayment(
-    getPlatformAdminContext(),
-    event.request,
-    Object.fromEntries(form.entries()),
-  )
-  return json(result, { revalidate: adminBillingQuery.key })
+  return adminResponse(async () => {
+    const event = getRequestEvent()
+    if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
+    return refundAdminSubscriptionPayment(getPlatformAdminContext(), event.request, Object.fromEntries(form.entries()))
+  })
 }, "admin.billing.refund")
 
 export const retryAdminPaymentRecoveryAction = action(async (form: FormData) => {
   "use server"
-  const event = getRequestEvent()
-  if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
-  const result = await retryAdminPaymentRecovery(
-    getPlatformAdminContext(),
-    event.request,
-    Object.fromEntries(form.entries()),
-  )
-  return json(result, { revalidate: adminPaymentRecoveryQueryKey })
+  return adminResponse(async () => {
+    const event = getRequestEvent()
+    if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
+    return retryAdminPaymentRecovery(getPlatformAdminContext(), event.request, Object.fromEntries(form.entries()))
+  })
 }, "admin.billing.recovery.retry")
 
 export interface AdminBillingData {
@@ -336,18 +327,7 @@ export function AdminBillingView(props: { data: AdminBillingData; recoveries: Ad
               {formatNumber(props.recoveries.summary.manualReview)}
             </span>
           </div>
-          <Show when={recoverySubmission.result}>
-            {(result) => (
-              <p
-                data-component="action-message"
-                data-outcome={result().ok ? "success" : "failure"}
-                role={result().ok ? "status" : "alert"}
-                aria-live="polite"
-              >
-                {result().message}
-              </p>
-            )}
-          </Show>
+          <AdminActionMessage result={recoverySubmission.result} error={recoverySubmission.error} />
           <div data-component="table-scroll">
             <table data-table="payment-recovery">
               <thead>
@@ -458,30 +438,8 @@ export function AdminBillingView(props: { data: AdminBillingData; recoveries: Ad
             </div>
             <span>{props.data.invoices.length} мөр</span>
           </div>
-          <Show when={cancellationSubmission.result}>
-            {(result) => (
-              <p
-                data-component="action-message"
-                data-outcome={result().ok ? "success" : "failure"}
-                role={result().ok ? "status" : "alert"}
-                aria-live="polite"
-              >
-                {result().message}
-              </p>
-            )}
-          </Show>
-          <Show when={refundSubmission.result}>
-            {(result) => (
-              <p
-                data-component="action-message"
-                data-outcome={result().ok ? "success" : "failure"}
-                role={result().ok ? "status" : "alert"}
-                aria-live="polite"
-              >
-                {result().message}
-              </p>
-            )}
-          </Show>
+          <AdminActionMessage result={cancellationSubmission.result} error={cancellationSubmission.error} />
+          <AdminActionMessage result={refundSubmission.result} error={refundSubmission.error} />
           <div data-component="table-scroll">
             <table data-table="payment-invoices">
               <thead>

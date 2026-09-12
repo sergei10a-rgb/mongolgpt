@@ -5,7 +5,8 @@ import { For, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 import { changeAdminAccountStatus, listAdminUsers } from "~/lib/admin-users"
-import { adminResponse, adminResponseError } from "~/lib/admin-response"
+import { adminResponse } from "~/lib/admin-response"
+import { AdminActionMessage } from "~/component/admin-action-message"
 
 export const adminUsersQuery = query(
   async (input: { q?: string; status?: string; cursor?: string; limit?: number }) => {
@@ -63,24 +64,7 @@ export default function AdminUsersPage() {
                 </span>
               </section>
 
-              <Show when={submission.result}>
-                {(result) => (
-                  <p
-                    data-component="action-message"
-                    data-outcome={result().ok ? "success" : "failure"}
-                    role={result().ok ? "status" : "alert"}
-                    aria-live="polite"
-                  >
-                    {result().message || adminResponseError}
-                  </p>
-                )}
-              </Show>
-
-              <Show when={submission.error}>
-                <p data-component="action-message" data-outcome="failure" role="alert">
-                  {adminResponseError}
-                </p>
-              </Show>
+              <AdminActionMessage result={submission.result} error={submission.error} />
 
               <form method="get" data-component="user-filters" aria-label="Хэрэглэгч шүүх">
                 <label>

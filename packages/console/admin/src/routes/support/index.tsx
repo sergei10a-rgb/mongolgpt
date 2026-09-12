@@ -1,10 +1,11 @@
 import { Title } from "@solidjs/meta"
-import { A, action, createAsync, json, query, useSearchParams, useSubmission } from "@solidjs/router"
+import { A, action, createAsync, query, useSearchParams } from "@solidjs/router"
 import { getRequestEvent } from "solid-js/web"
 import { ErrorBoundary, For, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 import { listAdminSupportQueue, mutateAdminSupport } from "~/lib/admin-support"
+import { adminResponse } from "~/lib/admin-response"
 
 export const adminSupportQueryKey = "admin.support"
 
@@ -18,29 +19,31 @@ export const adminSupportQueueQuery = query(
     limit?: number
   }) => {
     "use server"
-    return listAdminSupportQueue(getPlatformAdminContext(), {
-      status: isStatus(input.status) ? input.status : undefined,
-      priority: isPriority(input.priority) ? input.priority : undefined,
-      assignment: isAssignment(input.assignment) ? input.assignment : undefined,
-      accountID: input.accountID?.trim() || undefined,
-      cursor: input.cursor,
-      limit: input.limit === 50 ? 50 : 25,
-    })
+    return adminResponse(() =>
+      listAdminSupportQueue(getPlatformAdminContext(), {
+        status: isStatus(input.status) ? input.status : undefined,
+        priority: isPriority(input.priority) ? input.priority : undefined,
+        assignment: isAssignment(input.assignment) ? input.assignment : undefined,
+        accountID: input.accountID?.trim() || undefined,
+        cursor: input.cursor,
+        limit: input.limit === 50 ? 50 : 25,
+      }),
+    )
   },
   adminSupportQueryKey,
 )
 
 export const mutateAdminSupportAction = action(async (form: FormData) => {
   "use server"
-  const event = getRequestEvent()
-  if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
-  const values = Object.fromEntries(form.entries())
-  const input =
-    values.operation === "update" && values.assignedAdminID === "__unassigned"
-      ? { ...values, assignedAdminID: null }
-      : values
-  return json(await mutateAdminSupport(getPlatformAdminContext(), event.request, input), {
-    revalidate: adminSupportQueryKey,
+  return adminResponse(async () => {
+    const event = getRequestEvent()
+    if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
+    const values = Object.fromEntries(form.entries())
+    const input =
+      values.operation === "update" && values.assignedAdminID === "__unassigned"
+        ? { ...values, assignedAdminID: null }
+        : values
+    return mutateAdminSupport(getPlatformAdminContext(), event.request, input)
   })
 }, "admin.support.mutate")
 

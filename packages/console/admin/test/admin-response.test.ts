@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { provideRequestEvent } from "solid-js/web/storage"
 import type { RequestEvent } from "solid-js/web"
-import { adminResponse, adminResponseError } from "../src/lib/admin-response"
+import { adminActionFeedback, adminResponse, adminResponseError } from "../src/lib/admin-response"
 
 function request<T>(path: string, run: () => T) {
   // The transport reads only the request, not SolidStart's native response context.
@@ -12,6 +12,39 @@ function request<T>(path: string, run: () => T) {
 }
 
 describe("admin data-only server responses", () => {
+  test("action feedback is empty only before a response or error arrives", () => {
+    expect(adminActionFeedback(undefined)).toBeUndefined()
+    expect(adminActionFeedback({ ok: true, message: "Хадгаллаа." })).toEqual({ ok: true, message: "Хадгаллаа." })
+    expect(adminActionFeedback({ ok: false, message: "Төлөв өөрчлөгдсөн байна." })).toEqual({
+      ok: false,
+      message: "Төлөв өөрчлөгдсөн байна.",
+    })
+  })
+
+  test("malformed or lost action responses never become blank or successful feedback", () => {
+    for (const result of [
+      null,
+      false,
+      0,
+      "",
+      "upstream failed",
+      [],
+      {},
+      { ok: true },
+      { ok: true, message: " " },
+      { ok: "true", message: "wrong type" },
+    ]) {
+      expect(adminActionFeedback(result)).toEqual({ ok: false, message: adminResponseError })
+    }
+    for (const error of [null, new Error("synthetic-secret"), "raw transport error", false]) {
+      expect(adminActionFeedback(undefined, error)).toEqual({ ok: false, message: adminResponseError })
+      expect(adminActionFeedback({ ok: true, message: "Stale success" }, error)).toEqual({
+        ok: false,
+        message: adminResponseError,
+      })
+    }
+  })
+
   test("SSR keeps native values instead of replacing the document content type", async () => {
     const value = { ok: true, message: "Идэвхтэй", date: new Date(0) }
     const result = await request("/users", () => adminResponse(async () => value))

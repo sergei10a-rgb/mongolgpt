@@ -793,6 +793,7 @@ h2 {
 [data-component="billing-filters"] button,
 [data-component="audit-filters"] button,
 [data-component="support-filters"] button,
+[data-component="load-error-action"],
 [data-component="account-action"] button {
   min-height: 38px;
   padding: 0 12px;
@@ -1335,8 +1336,10 @@ td[data-action-cell] {
   width: min(280px, 65vw);
 }
 
-[data-component="payment-cancellation-action"] {
+[data-component="payment-cancellation-action"],
+[data-component="payment-refund-action"] {
   width: min(280px, 65vw);
+  white-space: normal;
 }
 
 [data-component="account-action"] summary {
@@ -1347,7 +1350,8 @@ td[data-action-cell] {
   cursor: pointer;
 }
 
-[data-component="payment-cancellation-action"] summary {
+[data-component="payment-cancellation-action"] summary,
+[data-component="payment-refund-action"] summary {
   width: fit-content;
   color: #a2362c;
   font-size: 12px;
@@ -1361,19 +1365,22 @@ td[data-action-cell] {
   padding-top: 12px;
 }
 
-[data-component="payment-cancellation-action"] form {
+[data-component="payment-cancellation-action"] form,
+[data-component="payment-refund-action"] form {
   display: grid;
   gap: 8px;
   padding-top: 12px;
 }
 
-[data-component="payment-cancellation-action"] label {
+[data-component="payment-cancellation-action"] label,
+[data-component="payment-refund-action"] label {
   color: #686d73;
   font-size: 11px;
   font-weight: 650;
 }
 
-[data-component="payment-cancellation-action"] textarea {
+[data-component="payment-cancellation-action"] textarea,
+[data-component="payment-refund-action"] textarea {
   width: 100%;
   min-height: 78px;
   padding: 8px 10px;
@@ -1385,19 +1392,22 @@ td[data-action-cell] {
   resize: vertical;
 }
 
-[data-component="payment-cancellation-action"] textarea:focus {
+[data-component="payment-cancellation-action"] textarea:focus,
+[data-component="payment-refund-action"] textarea:focus {
   border-color: #295ea8;
   outline: 2px solid rgba(41, 94, 168, 0.2);
   outline-offset: 1px;
 }
 
-[data-component="payment-cancellation-action"] [data-component="confirmation"] {
+[data-component="payment-cancellation-action"] [data-component="confirmation"],
+[data-component="payment-refund-action"] [data-component="confirmation"] {
   display: flex;
   align-items: flex-start;
   gap: 7px;
 }
 
-[data-component="payment-cancellation-action"] button {
+[data-component="payment-cancellation-action"] button,
+[data-component="payment-refund-action"] button {
   justify-self: start;
   min-height: 38px;
   padding: 0 12px;

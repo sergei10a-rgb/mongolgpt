@@ -30,13 +30,15 @@ describe("admin support view contract", () => {
     expect(view).toContain("Зөвхөн харах горим")
   })
 
-  test("binds every support mutation to the visible lock version and revalidates", async () => {
+  test("binds support mutations to the visible lock version and data-only response", async () => {
     const [queue, detail] = await Promise.all([
       source("../src/routes/support/index.tsx"),
       source("../src/routes/support/[ticketID].tsx"),
     ])
     expect(queue).toContain("mutateAdminSupport(getPlatformAdminContext(), event.request, input)")
-    expect(queue).toContain("revalidate: adminSupportQueryKey")
+    expect(queue).toContain("return adminResponse(async () =>")
+    expect(queue).not.toContain("revalidate:")
+    expect(detail).toContain("error={submission.error}")
     expect(detail.match(/name="expectedLockVersion"/g)?.length).toBe(3)
     expect(detail).toContain('name="operation" value="reply"')
     expect(detail).toContain('name="operation" value="note"')
@@ -50,7 +52,7 @@ describe("admin support view contract", () => {
     ])
     expect(detail).toContain("Дотоод тэмдэглэл (хэрэглэгчид харагдахгүй)")
     expect(detail).toContain("Энэ тэмдэглэл хэрэглэгчид огт харагдахгүй.")
-    expect(detail).toContain('current.status !== "resolved" && current.status !== "closed"')
+    expect(detail).toContain('current().status !== "resolved" && current().status !== "closed"')
     expect(detail).toContain("Холбоо барих имэйл")
     expect(detail).toContain("Админы хариу (хэрэглэгчид харагдана)")
     expect(service).toContain("listAssignableSupportAdmins")

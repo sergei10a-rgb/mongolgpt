@@ -1,25 +1,24 @@
 import { Title } from "@solidjs/meta"
-import { action, createAsync, json, query, useSubmission } from "@solidjs/router"
+import { action, createAsync, query, useSubmission } from "@solidjs/router"
 import { getRequestEvent } from "solid-js/web"
 import { For, Show } from "solid-js"
 import { AdminHeader, roleLabel } from "~/component/admin-header"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 import { listAdminOperators, mutateAdminOperator } from "~/lib/admin-operators"
+import { adminResponse } from "~/lib/admin-response"
+import { AdminActionMessage } from "~/component/admin-action-message"
 
-export const adminOperatorsQuery = query(
-  async () => {
-    "use server"
-    return listAdminOperators(getPlatformAdminContext())
-  },
-  "admin.operators.list",
-)
+export const adminOperatorsQuery = query(async () => {
+  "use server"
+  return adminResponse(() => listAdminOperators(getPlatformAdminContext()))
+}, "admin.operators.list")
 
 export const mutateAdminOperatorAction = action(async (form: FormData) => {
   "use server"
-  const event = getRequestEvent()
-  if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
-  return json(await mutateAdminOperator(getPlatformAdminContext(), event.request, Object.fromEntries(form.entries())), {
-    revalidate: adminOperatorsQuery.key,
+  return adminResponse(async () => {
+    const event = getRequestEvent()
+    if (!event) throw new Error("Админы хүсэлтийн орчин олдсонгүй.")
+    return mutateAdminOperator(getPlatformAdminContext(), event.request, Object.fromEntries(form.entries()))
   })
 }, "admin.operators.mutate")
 
@@ -52,18 +51,7 @@ export default function AdminOperatorsPage() {
                 <span data-component="read-only">Зөвхөн эзэмшигч удирдана</span>
               </section>
 
-              <Show when={submission.result}>
-                {(result) => (
-                  <p
-                    data-component="action-message"
-                    data-outcome={result().ok ? "success" : "failure"}
-                    role={result().ok ? "status" : "alert"}
-                    aria-live="polite"
-                  >
-                    {result().message}
-                  </p>
-                )}
-              </Show>
+              <AdminActionMessage result={submission.result} error={submission.error} />
 
               <section data-component="operator-create" aria-labelledby="operator-create-title">
                 <div data-component="section-heading">
@@ -76,7 +64,14 @@ export default function AdminOperatorsPage() {
                   <input type="hidden" name="operation" value="create" />
                   <label>
                     <span>Имэйл</span>
-                    <input name="email" type="email" autocomplete="email" maxlength="254" required placeholder="operator@company.mn" />
+                    <input
+                      name="email"
+                      type="email"
+                      autocomplete="email"
+                      maxlength="254"
+                      required
+                      placeholder="operator@company.mn"
+                    />
                   </label>
                   <label>
                     <span>Эрх</span>
@@ -140,7 +135,10 @@ export default function AdminOperatorsPage() {
                             <td>{formatDate(operator.timeLastSeen)}</td>
                             <td>{formatDate(operator.timeCreated)}</td>
                             <td data-action-cell>
-                              <Show when={operator.mutable} fallback={<span data-component="self-account">Хамгаалагдсан эрх</span>}>
+                              <Show
+                                when={operator.mutable}
+                                fallback={<span data-component="self-account">Хамгаалагдсан эрх</span>}
+                              >
                                 <details data-component="operator-action">
                                   <summary>Удирдах</summary>
                                   <div>
@@ -156,9 +154,17 @@ export default function AdminOperatorsPage() {
                                       </button>
                                     </form>
                                     <form action={mutateAdminOperatorAction} method="post">
-                                      <input type="hidden" name="operation" value={operator.status === "active" ? "suspend" : "reactivate"} />
+                                      <input
+                                        type="hidden"
+                                        name="operation"
+                                        value={operator.status === "active" ? "suspend" : "reactivate"}
+                                      />
                                       <input type="hidden" name="operatorID" value={operator.id} />
-                                      <button type="submit" data-variant={operator.status === "active" ? "danger" : "primary"} disabled={submission.pending}>
+                                      <button
+                                        type="submit"
+                                        data-variant={operator.status === "active" ? "danger" : "primary"}
+                                        disabled={submission.pending}
+                                      >
                                         {submission.pending
                                           ? "Хадгалж байна..."
                                           : operator.status === "active"

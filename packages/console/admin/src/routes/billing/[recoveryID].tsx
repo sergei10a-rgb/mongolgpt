@@ -6,10 +6,12 @@ import { paymentRecoveryStatusLabel, retryAdminPaymentRecoveryAction } from "~/c
 import { getPlatformAdminContext } from "~/lib/admin-context"
 import { getAdminPaymentRecoveryDetail } from "~/lib/admin-payment-recovery"
 import { adminPaymentRecoveryQueryKey } from "~/lib/admin-payment-recovery-query"
+import { adminResponse } from "~/lib/admin-response"
+import { AdminActionMessage } from "~/component/admin-action-message"
 
 export const adminPaymentRecoveryDetailQuery = query(async (recoveryID: string) => {
   "use server"
-  return getAdminPaymentRecoveryDetail(getPlatformAdminContext(), recoveryID)
+  return adminResponse(() => getAdminPaymentRecoveryDetail(getPlatformAdminContext(), recoveryID))
 }, adminPaymentRecoveryQueryKey)
 
 export default function AdminPaymentRecoveryDetailPage() {
@@ -37,6 +39,7 @@ export default function AdminPaymentRecoveryDetailPage() {
               <main data-page="admin-billing">
                 <Show
                   when={data().recovery}
+                  keyed
                   fallback={
                     <>
                       <section data-component="page-heading">
@@ -57,7 +60,7 @@ export default function AdminPaymentRecoveryDetailPage() {
                   }
                 >
                   {(selected) => {
-                    const recovery = selected()
+                    const recovery = selected
                     return (
                       <>
                         <section data-component="page-heading">
@@ -72,18 +75,7 @@ export default function AdminPaymentRecoveryDetailPage() {
                           </A>
                         </section>
 
-                        <Show when={submission.result}>
-                          {(result) => (
-                            <p
-                              data-component="action-message"
-                              data-outcome={result().ok ? "success" : "failure"}
-                              role={result().ok ? "status" : "alert"}
-                              aria-live="polite"
-                            >
-                              {result().message}
-                            </p>
-                          )}
-                        </Show>
+                        <AdminActionMessage result={submission.result} error={submission.error} />
 
                         <section data-component="status-band" data-payment-recovery-detail>
                           <div>

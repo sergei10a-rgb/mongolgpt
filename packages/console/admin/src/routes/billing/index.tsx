@@ -6,10 +6,11 @@ import { adminBillingQuery } from "~/lib/admin-billing-query"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 import { listAdminPaymentRecoveries } from "~/lib/admin-payment-recovery"
 import { adminPaymentRecoveryQueryKey } from "~/lib/admin-payment-recovery-query"
+import { adminResponse } from "~/lib/admin-response"
 
 export const adminPaymentRecoveryListQuery = query(async () => {
   "use server"
-  return listAdminPaymentRecoveries(getPlatformAdminContext())
+  return adminResponse(() => listAdminPaymentRecoveries(getPlatformAdminContext()))
 }, adminPaymentRecoveryQueryKey)
 
 export default function AdminBillingPage() {

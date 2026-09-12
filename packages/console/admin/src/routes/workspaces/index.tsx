@@ -4,11 +4,12 @@ import { For, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 import { listAdminWorkspaces } from "~/lib/admin-workspaces"
+import { adminResponse } from "~/lib/admin-response"
 
 export const adminWorkspacesQuery = query(
   async (input: { q?: string; cursor?: string; limit?: number; workspace?: string }) => {
     "use server"
-    return listAdminWorkspaces(getPlatformAdminContext(), input)
+    return adminResponse(() => listAdminWorkspaces(getPlatformAdminContext(), input))
   },
   "admin.workspaces.list",
 )

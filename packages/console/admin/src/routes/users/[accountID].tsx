@@ -4,14 +4,12 @@ import { For, Show } from "solid-js"
 import { AdminHeader } from "~/component/admin-header"
 import { getPlatformAdminContext } from "~/lib/admin-context"
 import { getAdminUserDetail } from "~/lib/admin-users"
+import { adminResponse } from "~/lib/admin-response"
 
-export const adminUserDetailQuery = query(
-  async (input: { accountID: string }) => {
-    "use server"
-    return getAdminUserDetail(getPlatformAdminContext(), input)
-  },
-  "admin.users.detail",
-)
+export const adminUserDetailQuery = query(async (input: { accountID: string }) => {
+  "use server"
+  return adminResponse(() => getAdminUserDetail(getPlatformAdminContext(), input))
+}, "admin.users.detail")
 
 export default function AdminUserDetailPage() {
   const params = useParams()
@@ -53,16 +51,22 @@ export default function AdminUserDetailPage() {
                   <span>Шинэчилсэн: {formatDate(data().generatedAt)}</span>
                 </div>
 
-                <Show when={data().account} fallback={<p data-component="empty">Хэрэглэгчийн бүртгэл олдсонгүй.</p>}>
+                <Show
+                  when={data().account}
+                  keyed
+                  fallback={<p data-component="empty">Хэрэглэгчийн бүртгэл олдсонгүй.</p>}
+                >
                   {(selected) => {
-                    const account = selected()
+                    const account = selected
                     return (
                       <>
                         <section data-component="status-band">
                           <div>
                             <span>Аккаунт</span>
                             <strong>{account.id}</strong>
-                            <code>{account.identities.find((item) => item.provider === "email")?.subject ?? "Имэйлгүй"}</code>
+                            <code>
+                              {account.identities.find((item) => item.provider === "email")?.subject ?? "Имэйлгүй"}
+                            </code>
                           </div>
                           <div>
                             <span>Төлөв</span>
@@ -135,7 +139,8 @@ export default function AdminUserDetailPage() {
                               <h2 id="workspace-title">Оролцож буй ажлын орон зай</h2>
                             </div>
                             <span>
-                              Basic {formatNumber(account.totals.plans.basic)} · Pro {formatNumber(account.totals.plans.pro)} · Max {formatNumber(account.totals.plans.max)}
+                              Basic {formatNumber(account.totals.plans.basic)} · Pro{" "}
+                              {formatNumber(account.totals.plans.pro)} · Max {formatNumber(account.totals.plans.max)}
                             </span>
                           </div>
                           <div data-component="table-scroll">
@@ -176,7 +181,8 @@ export default function AdminUserDetailPage() {
                                         <Show when={workspace.subscription} fallback="Идэвхтэй захиалга алга">
                                           {(subscription) => (
                                             <span>
-                                              {planLabel(subscription().plan)} · {subscriptionLabel(subscription().status)}
+                                              {planLabel(subscription().plan)} ·{" "}
+                                              {subscriptionLabel(subscription().status)}
                                             </span>
                                           )}
                                         </Show>
@@ -184,7 +190,9 @@ export default function AdminUserDetailPage() {
                                       <td>
                                         <span data-component="inline-stack">
                                           <strong>{formatMicroUsd(workspace.usageSnapshot.monthlyCost.used)}</strong>
-                                          <small>{formatNumber(workspace.usageSnapshot.monthlyTokens.used)} токен</small>
+                                          <small>
+                                            {formatNumber(workspace.usageSnapshot.monthlyTokens.used)} токен
+                                          </small>
                                         </span>
                                       </td>
                                       <td>{formatDate(workspace.timeSeen)}</td>
@@ -328,7 +336,8 @@ export default function AdminUserDetailPage() {
                           </section>
                           <Show when={account.paymentSummary.marginReasons.length > 0}>
                             <p data-component="notice">
-                              Нийт ашгийг тооцоогүй: {account.paymentSummary.marginReasons.map(marginReasonLabel).join(", ")}.
+                              Нийт ашгийг тооцоогүй:{" "}
+                              {account.paymentSummary.marginReasons.map(marginReasonLabel).join(", ")}.
                             </p>
                           </Show>
                           <div data-component="table-scroll">
@@ -368,7 +377,9 @@ export default function AdminUserDetailPage() {
                                       <td>{invoice.plan ? planLabel(invoice.plan) : "Кредит"}</td>
                                       <td>{formatMoney(invoice.amount, invoice.currency)}</td>
                                       <td>
-                                        <span data-payment-status={invoice.status}>{paymentStatusLabel(invoice.status)}</span>
+                                        <span data-payment-status={invoice.status}>
+                                          {paymentStatusLabel(invoice.status)}
+                                        </span>
                                       </td>
                                       <td>{formatDate(invoice.timeCreated)}</td>
                                     </tr>
@@ -399,25 +410,27 @@ function Metric(props: { label: string; value: number | null; kind?: "currency" 
         {props.value === null
           ? "Тооцоолох боломжгүй"
           : props.kind === "currency"
-          ? formatMicroUsd(props.value)
-          : props.kind === "mnt"
-            ? formatMNTMicros(props.value)
-            : props.kind === "mnt-base"
-              ? formatMNT(props.value)
-              : formatNumber(props.value)}
+            ? formatMicroUsd(props.value)
+            : props.kind === "mnt"
+              ? formatMNTMicros(props.value)
+              : props.kind === "mnt-base"
+                ? formatMNT(props.value)
+                : formatNumber(props.value)}
       </strong>
     </article>
   )
 }
 
 function marginReasonLabel(reason: string) {
-  return {
-    payment_provider_filter: "төлбөрийн үйлчилгээний шүүлтүүртэй",
-    missing_model_costs: "загварын бодит өртгийн бүртгэл дутуу",
-    unvalued_model_costs: "загварын өртөг MNT-өөр үнэлэгдээгүй",
-    missing_payment_settlements: "төлбөрийн тооцоо нийлүүлэлт дутуу",
-    ambiguous_payment_settlements: "төлбөрийн тооцоо нийлүүлэлт давхардсан",
-  }[reason] ?? reason
+  return (
+    {
+      payment_provider_filter: "төлбөрийн үйлчилгээний шүүлтүүртэй",
+      missing_model_costs: "загварын бодит өртгийн бүртгэл дутуу",
+      unvalued_model_costs: "загварын өртөг MNT-өөр үнэлэгдээгүй",
+      missing_payment_settlements: "төлбөрийн тооцоо нийлүүлэлт дутуу",
+      ambiguous_payment_settlements: "төлбөрийн тооцоо нийлүүлэлт давхардсан",
+    }[reason] ?? reason
+  )
 }
 
 function subscriptionLabel(status: string) {
@@ -425,15 +438,17 @@ function subscriptionLabel(status: string) {
 }
 
 function paymentStatusLabel(status: string) {
-  return {
-    created: "Үүссэн",
-    pending: "Хүлээгдэж буй",
-    paid: "Төлөгдсөн",
-    failed: "Амжилтгүй",
-    expired: "Хугацаа дууссан",
-    cancelled: "Цуцлагдсан",
-    refunded: "Буцаагдсан",
-  }[status] ?? status
+  return (
+    {
+      created: "Үүссэн",
+      pending: "Хүлээгдэж буй",
+      paid: "Төлөгдсөн",
+      failed: "Амжилтгүй",
+      expired: "Хугацаа дууссан",
+      cancelled: "Цуцлагдсан",
+      refunded: "Буцаагдсан",
+    }[status] ?? status
+  )
 }
 
 function planLabel(plan: string) {
