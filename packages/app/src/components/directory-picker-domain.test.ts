@@ -187,6 +187,37 @@ test("keeps an empty hosted workspace selectable", async () => {
   expect(await search("")).toEqual(["/workspace"])
 })
 
+test.each(["C:/Projects/example", "C:\\Projects\\example", "C:/Projects\\example"])(
+  "resolves an outside-home Windows directory before its children: %s",
+  async (input) => {
+    const calls: string[] = []
+    const children: Record<string, string[]> = {
+      "C:/": ["Projects"],
+      "C:/Projects": ["example"],
+      "C:/Projects/example": [".git", "src"],
+    }
+    const sdk = {
+      client: {
+        file: {
+          list: ({ directory }: { directory: string }) => {
+            calls.push(directory)
+            return Promise.resolve({
+              data: (children[directory] ?? []).map((name) => ({
+                name,
+                absolute: `${directory.replace(/\/$/, "")}/${name}`.replaceAll("/", "\\"),
+                type: "directory",
+              })),
+            })
+          },
+        },
+      },
+    } as unknown as Parameters<typeof createDirectorySearch>[0]["sdk"]
+    const search = createDirectorySearch({ sdk, home: () => "C:/Users/tester", base: () => "C:/Users/tester" })
+    expect(await search(input)).toEqual(["C:/Projects/example", "C:/Projects/example/.git", "C:/Projects/example/src"])
+    expect(calls).toEqual(["C:/", "C:/Projects", "C:/Projects/example"])
+  },
+)
+
 test("identifies the next directory level to preload", () => {
   expect(
     preloadTreeDirectories("src/", [

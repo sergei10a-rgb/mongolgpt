@@ -21,6 +21,7 @@ type Row = {
   absolute: string
   search: string
   group: "recent" | "folders"
+  matched?: boolean
 }
 
 function toRow(absolute: string, home: string, group: Row["group"]): Row {
@@ -114,7 +115,11 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
   const items = async (value: string) => {
     const results = await directories(value)
     const directoryRows = results.map((absolute) => toRow(absolute, home(), "folders"))
-    return uniqueRows([...recentProjects(), ...directoryRows])
+    const matched = new Set(directoryRows.map((row) => row.absolute))
+    return uniqueRows([
+      ...recentProjects().map((row) => ({ ...row, matched: matched.has(row.absolute) })),
+      ...directoryRows,
+    ])
   }
 
   function resolve(absolute: string) {
@@ -132,6 +137,8 @@ export function DialogSelectDirectory(props: DialogSelectDirectoryProps) {
         items={items}
         key={(x) => x.absolute}
         filterKeys={["search"]}
+        // Directory search already normalizes separators and ranks these results.
+        skipFilter={(item) => item.group === "folders" || item.matched === true}
         groupBy={(item) => item.group}
         sortGroupsBy={(a, b) => {
           if (a.category === b.category) return 0

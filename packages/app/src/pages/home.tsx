@@ -415,7 +415,11 @@ export function NewHome() {
 
     pickDirectory({
       server: conn,
-      title: language.t(platform.platform === "web" ? "home.project.openCloud" : "command.project.open"),
+      title: language.t(
+        platform.platform === "web" && !ServerConnection.local(conn)
+          ? "home.project.openCloud"
+          : "command.project.open",
+      ),
       multiple: true,
       onSelect: resolve,
     })
@@ -526,7 +530,7 @@ export function NewHome() {
                       ? openProjectPicker
                       : undefined
                   }
-                  hosted={platform.platform === "web"}
+                  hosted={platform.platform === "web" && !ServerConnection.local(focusedServer())}
                   onConnectDesktop={bridge.canLocalBridge() ? () => void bridge.startLocalBridge() : undefined}
                   connectingDesktop={bridge.bridgeBusy()}
                 />
@@ -1391,8 +1395,8 @@ export function LegacyHome() {
   const server = useServer()
   const language = useLanguage()
   const bridge = useServerManagementController({ navigateOnAdd: false })
-  const hosted = () => platform.platform === "web"
-  const canOpenProject = () => !hosted() || !!(sync().data.path.home || sync().data.path.directory)
+  const hosted = () => platform.platform === "web" && !ServerConnection.local(server.current)
+  const canOpenProject = () => platform.platform !== "web" || !!(sync().data.path.home || sync().data.path.directory)
   const openProjectLabel = () => language.t(hosted() ? "home.project.openCloud" : "command.project.open")
   const homedir = createMemo(() => sync().data.path.home)
   const serverUnreachable = createMemo(() => global.servers.health[server.key]?.healthy === false)
@@ -1458,13 +1462,13 @@ export function LegacyHome() {
         {server.name}
       </Button>
       <Switch>
-        <Match when={hosted() && sync().pathStatus === "loading"}>
+        <Match when={platform.platform === "web" && sync().pathStatus === "loading"}>
           <div class="mt-30 mx-auto flex flex-col items-center gap-3">
             <Icon name="folder-add-left" size="large" />
             <div class="text-12-regular text-text-weak">{language.t("common.loading")}</div>
           </div>
         </Match>
-        <Match when={hosted() && sync().pathStatus === "error"}>
+        <Match when={platform.platform === "web" && sync().pathStatus === "error"}>
           <div class="mt-30 mx-auto flex flex-col items-center gap-3">
             <Icon name="folder-add-left" size="large" />
             <div class="flex flex-col gap-1 items-center justify-center text-center">
