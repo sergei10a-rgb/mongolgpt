@@ -241,13 +241,13 @@ describe("Console UI deployment guard", () => {
       PULUMI_NODEJS_DRY_RUN: "false",
       PULUMI_NODEJS_MONITOR: "127.0.0.1:1234",
       PULUMI_NODEJS_ENGINE: "localhost:1235",
-      PULUMI_NODEJS_SYNC: "/tmp/pulumi-nodejs1234",
+      PULUMI_NODEJS_SYNC: "/tmp/pulumi-node-pipes1234",
     }
     local.new.inputs.environment = {
       PULUMI_NODEJS_DRY_RUN: "true",
       PULUMI_NODEJS_MONITOR: "127.0.0.1:2345",
       PULUMI_NODEJS_ENGINE: "localhost:2346",
-      PULUMI_NODEJS_SYNC: "/tmp/pulumi-nodejs2345",
+      PULUMI_NODEJS_SYNC: "/tmp/pulumi-node-pipes2345",
     }
     expect(verifyConsoleUiDeploymentDiff([script(), local]).builderUpdates).toBe(1)
     for (const [key, value] of Object.entries({
@@ -271,6 +271,55 @@ describe("Console UI deployment guard", () => {
       PULUMI_CONFIG: "changed",
     })) {
       const changed = structuredClone(local)
+      ;(changed.new.inputs.environment as Record<string, unknown>)[key] = value
+      rejects([script(), changed])
+    }
+  })
+
+  test("accepts only checkout-local SST workdirs and typed runner process metadata", () => {
+    const local = builder()
+    local.old.inputs.environment = {
+      PULUMI_BACKEND_URL: `file:///repo/.sst/pulumi/${"a".repeat(24)}`,
+      PULUMI_NODEJS_ROOT_DIRECTORY: `/repo/.sst/pulumi/${"a".repeat(24)}`,
+      INVOCATION_ID: "c".repeat(32),
+      JOURNAL_STREAM: "8:123456",
+      SYSTEMD_EXEC_PID: "1234",
+      SST_RESOURCE_Secret: "[secret]",
+    }
+    local.new.inputs.environment = {
+      PULUMI_BACKEND_URL: `file:///repo/.sst/pulumi/${"b".repeat(24)}`,
+      PULUMI_NODEJS_ROOT_DIRECTORY: `/repo/.sst/pulumi/${"b".repeat(24)}`,
+      INVOCATION_ID: "d".repeat(32),
+      JOURNAL_STREAM: "8:234567",
+      SYSTEMD_EXEC_PID: "2345",
+      SST_RESOURCE_Secret: "[secret]",
+    }
+    const paths = Object.keys(local.new.inputs.environment as object)
+      .filter((key) => key !== "SST_RESOURCE_Secret")
+      .map((key) => `environment.${key}`)
+    const proof = {
+      ...local,
+      diffs: [...paths, "triggers[0]"],
+      detailedDiff: Object.fromEntries(
+        [...paths, "triggers[0]"].map((key) => [key, { diffKind: "update", inputDiff: false }]),
+      ),
+    }
+    expect(verifyConsoleUiDeploymentDiff([script(), proof]).builderUpdates).toBe(1)
+    for (const [key, value] of [
+      ["PULUMI_BACKEND_URL", "https://other.invalid"],
+      ["PULUMI_BACKEND_URL", `file:///other/.sst/pulumi/${"b".repeat(24)}`],
+      ["PULUMI_BACKEND_URL", `file:///repo/.sst/pulumi/${"a".repeat(24)}`],
+      ["PULUMI_NODEJS_ROOT_DIRECTORY", "/repo/.sst/pulumi/../../private"],
+      ["PULUMI_NODEJS_ROOT_DIRECTORY", `/repo/.sst/pulumi/${"g".repeat(24)}`],
+      ["INVOCATION_ID", "untyped"],
+      ["JOURNAL_STREAM", "arbitrary"],
+      ["SYSTEMD_EXEC_PID", "-1"],
+      ["PULUMI_NODEJS_SYNC", "/tmp/pulumi-nodejs1234"],
+      ["PATH", "/other"],
+      ["NODE_OPTIONS", "--require unapproved"],
+      ["UNRECOGNIZED_SETTING", "changed"],
+    ]) {
+      const changed = structuredClone(proof)
       ;(changed.new.inputs.environment as Record<string, unknown>)[key] = value
       rejects([script(), changed])
     }

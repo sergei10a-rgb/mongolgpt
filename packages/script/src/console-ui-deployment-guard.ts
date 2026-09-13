@@ -96,6 +96,7 @@ const engineEnvironment = [
   "PULUMI_NODEJS_MONITOR",
   "PULUMI_NODEJS_ENGINE",
   "PULUMI_NODEJS_SYNC",
+  "PULUMI_BACKEND_URL",
   "PULUMI_CONFIG",
   "PULUMI_CONFIG_SECRET_KEYS",
   "PULUMI_NODEJS_PROJECT",
@@ -113,6 +114,8 @@ const engineEnvironment = [
   "ImageVersion",
   "ImageOS",
   "INVOCATION_ID",
+  "JOURNAL_STREAM",
+  "SYSTEMD_EXEC_PID",
 ]
 type Reason =
   | "invalid-preview"
@@ -537,6 +540,11 @@ function verify(value: unknown, complete = true) {
             "PULUMI_NODEJS_MONITOR",
             "PULUMI_NODEJS_ENGINE",
             "PULUMI_NODEJS_SYNC",
+            "PULUMI_NODEJS_ROOT_DIRECTORY",
+            "PULUMI_BACKEND_URL",
+            "INVOCATION_ID",
+            "JOURNAL_STREAM",
+            "SYSTEMD_EXEC_PID",
           ].includes(key)
         )
           return false
@@ -554,11 +562,28 @@ function verify(value: unknown, complete = true) {
             !/^(?:127\.0\.0\.1|localhost):[1-9]\d{0,4}$/.test(value)
           )
             reject("invalid-state")
-          if (key === "PULUMI_NODEJS_SYNC" && !/^\/tmp\/pulumi-nodejs[A-Za-z0-9_-]+$/.test(value))
-            reject("invalid-state")
+          // Pulumi creates /tmp/pulumi-node-pipes<random>; SST uses a 24-hex
+          // update ID below this checkout's .sst/pulumi for its local backend.
+          if (key === "PULUMI_NODEJS_SYNC" && !/^\/tmp\/pulumi-node-pipes\d+$/.test(value)) reject("invalid-state")
+          if (["PULUMI_NODEJS_ROOT_DIRECTORY", "PULUMI_BACKEND_URL"].includes(key)) {
+            const root = String(before.dir).replace(/\/packages\/console\/app$/, "")
+            const prefix = `${key === "PULUMI_BACKEND_URL" ? "file://" : ""}${root}/.sst/pulumi/`
+            if (!value.startsWith(prefix) || !/^[a-f0-9]{24}$/.test(value.slice(prefix.length))) reject("invalid-state")
+          }
+          if (key === "INVOCATION_ID" && !/^[a-f0-9]{32}$/.test(value)) reject("invalid-state")
+          if (key === "JOURNAL_STREAM" && !/^\d+:\d+$/.test(value)) reject("invalid-state")
+          if (key === "SYSTEMD_EXEC_PID" && !/^[1-9]\d*$/.test(value)) reject("invalid-state")
         }
         return true
       })
+      for (const env of [oldEnv, newEnv]) {
+        if (
+          env.PULUMI_BACKEND_URL !== undefined &&
+          env.PULUMI_NODEJS_ROOT_DIRECTORY !== undefined &&
+          env.PULUMI_BACKEND_URL !== `file://${env.PULUMI_NODEJS_ROOT_DIRECTORY}`
+        )
+          reject("invalid-state")
+      }
       const oldProtected = omit(oldEnv, ephemeral)
       const newProtected = omit(newEnv, ephemeral)
       if (!isDeepStrictEqual(oldProtected, newProtected)) reject("changed-protected-value")
