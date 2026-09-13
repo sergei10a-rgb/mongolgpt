@@ -42,6 +42,7 @@ async function probe() {
   const identity = candidateProbeContext(process.env)
   const node = Bun.which("node")
   if (!node) throw new Error("Node runtime is missing")
+  console.log("CANDIDATE_PROBE_PHASE metadata_before")
   const before = await verify()
   const folder = await mkdtemp(join(process.env.RUNNER_TEMP!, "mongolgpt-candidate-probe-"))
   await chmod(folder, 0o700)
@@ -50,13 +51,28 @@ async function probe() {
     const reportPath = join(folder, "result.json")
     await writeFile(configPath, JSON.stringify(candidateProbeConfig()), { mode: 0o600, flag: "wx" })
     // Wrangler's Node-only proxy invokes a private service binding; it does not deploy or expose the candidate.
-    await runCandidateCommand(
-      [node, fileURLToPath(new URL("./candidate-service-probe.ts", import.meta.url)), configPath, reportPath],
-      180_000,
-    )
+    console.log("CANDIDATE_PROBE_PHASE private_service")
+    try {
+      await runCandidateCommand(
+        [node, fileURLToPath(new URL("./candidate-service-probe.ts", import.meta.url)), configPath, reportPath],
+        180_000,
+      )
+    } catch {
+      if (await Bun.file(reportPath).exists()) {
+        const failure: unknown = await Bun.file(reportPath).json()
+        if (failure && typeof failure === "object" && "failure" in failure) {
+          const categories = ["proxy_setup", "http_contract", "proxy_cleanup", "module_load"]
+          if (categories.includes(String(failure.failure))) console.log(`CANDIDATE_PROBE_FAILURE ${failure.failure}`)
+          if ("code" in failure && typeof failure.code === "number" && Number.isSafeInteger(failure.code))
+            console.log(`CANDIDATE_PROBE_API_CODE ${failure.code}`)
+        }
+      }
+      throw new Error("Candidate service probe failed")
+    }
     const result: unknown = await Bun.file(reportPath).json()
     if (JSON.stringify(result) !== JSON.stringify({ health: 200, wrongOrigin: 403, anonymous: 401, invalidToken: 401 }))
       throw new Error("Candidate probe receipt is invalid")
+    console.log("CANDIDATE_PROBE_PHASE metadata_after")
     const after = await verify()
     if (before.namespaceID !== after.namespaceID) throw new Error("Candidate namespace changed during the probe")
     await writeFile(
@@ -89,7 +105,24 @@ async function verify() {
 }
 
 if (import.meta.main)
-  probe().catch(() => {
+  probe().catch((error: unknown) => {
+    const known = [
+      "Candidate probe context is invalid",
+      "Candidate metadata response is invalid",
+      "Candidate settings or private ingress could not be verified",
+      "Candidate binding mismatch",
+      "Candidate storage mismatch",
+      "Candidate namespace is not isolated",
+      "Candidate variable mismatch",
+      "Candidate rate limit mismatch",
+      "Candidate must not bind other Workers",
+      "Candidate public routes or custom domains are present or unverified",
+      "Candidate route pagination is inconsistent",
+      "Candidate probe receipt is invalid",
+      "Candidate namespace changed during the probe",
+      "Candidate service probe failed",
+    ]
+    if (error instanceof Error && known.includes(error.message)) console.error(error.message)
     console.error("Private candidate probe failed; private command output was not logged. No promotion performed.")
     process.exitCode = 1
   })

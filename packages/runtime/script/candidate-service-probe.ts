@@ -67,16 +67,35 @@ async function main() {
   const reportPath = process.argv[3]
   if (process.argv.length !== 4 || !isAbsolute(configPath) || !isAbsolute(reportPath))
     throw new Error("Private probe paths are invalid")
-  const { getPlatformProxy } = await import("wrangler")
-  const platform = await getPlatformProxy<{ CANDIDATE: { fetch(input: Request): Promise<Response> } }>({
-    configPath,
-    persist: false,
-    remoteBindings: true,
-  })
-  const result = await probeCandidateService((request) => platform.env.CANDIDATE.fetch(request)).finally(() =>
-    platform.dispose(),
-  )
-  await writeFile(reportPath, JSON.stringify(result), { mode: 0o600, flag: "wx" })
+  let phase = "module_load"
+  try {
+    const { getPlatformProxy } = await import("wrangler")
+    phase = "proxy_setup"
+    const platform = await getPlatformProxy<{ CANDIDATE: { fetch(input: Request): Promise<Response> } }>({
+      configPath,
+      persist: false,
+      remoteBindings: true,
+    })
+    phase = "http_contract"
+    const result = await probeCandidateService((request) => platform.env.CANDIDATE.fetch(request)).finally(async () => {
+      try {
+        await platform.dispose()
+      } catch (error) {
+        phase = "proxy_cleanup"
+        throw error
+      }
+    })
+    await writeFile(reportPath, JSON.stringify(result), { mode: 0o600, flag: "wx" })
+  } catch (error) {
+    await writeFile(reportPath, JSON.stringify({ failure: phase, code: probeErrorCode(error) }), { mode: 0o600 })
+    throw new Error("Private probe failed")
+  }
+}
+
+export function probeErrorCode(error: unknown, depth = 0): number | undefined {
+  if (!error || typeof error !== "object" || depth > 3) return
+  if ("code" in error && typeof error.code === "number" && Number.isSafeInteger(error.code)) return error.code
+  if ("cause" in error) return probeErrorCode(error.cause, depth + 1)
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url))
