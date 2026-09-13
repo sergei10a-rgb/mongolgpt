@@ -382,7 +382,16 @@ export async function sameLocalPath(left: string, right: string) {
   return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b
 }
 
-export function releaseSmokeTerminalCommand() {
+export function releaseSmokeTerminalCommand(platform: NodeJS.Platform = process.platform) {
+  if (platform !== "win32") {
+    return {
+      command: "/bin/sh",
+      args: [
+        "-c",
+        'set -eu; { git -C "$MONGOLGPT_SMOKE_ROOT" status --short; git -C "$MONGOLGPT_SMOKE_ROOT" diff; } > "$MONGOLGPT_SMOKE_PROOF"',
+      ],
+    }
+  }
   const script = [
     "$ErrorActionPreference = 'Stop'",
     "$status = @(& git -C $env:MONGOLGPT_SMOKE_ROOT status --short)",

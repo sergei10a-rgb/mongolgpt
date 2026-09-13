@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { mkdtemp, rm } from "node:fs/promises"
+import { execFileSync } from "node:child_process"
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
@@ -115,7 +116,7 @@ describe("release functional smoke validators", () => {
   })
 
   test("encodes the Windows terminal proof without command-line quoting", () => {
-    const command = releaseSmokeTerminalCommand()
+    const command = releaseSmokeTerminalCommand("win32")
     expect(command.command).toBe("powershell.exe")
     expect(command.args.slice(0, 4)).toEqual(["-NoLogo", "-NoProfile", "-NonInteractive", "-EncodedCommand"])
     const script = Buffer.from(command.args[4] ?? "", "base64").toString("utf16le")
@@ -123,5 +124,38 @@ describe("release functional smoke validators", () => {
     expect(script).toContain("MONGOLGPT_SMOKE_PROOF")
     expect(script).toContain("status --short")
     expect(script).toContain("git -C $env:MONGOLGPT_SMOKE_ROOT diff")
+  })
+
+  test("uses an environment-quoted POSIX terminal proof on macOS and Linux", () => {
+    for (const platform of ["darwin", "linux"] as const) {
+      const command = releaseSmokeTerminalCommand(platform)
+      expect(command.command).toBe("/bin/sh")
+      expect(command.args[0]).toBe("-c")
+      expect(command.args[1]).toContain('git -C "$MONGOLGPT_SMOKE_ROOT" status --short')
+      expect(command.args[1]).toContain('git -C "$MONGOLGPT_SMOKE_ROOT" diff')
+      expect(command.args[1]).toContain('> "$MONGOLGPT_SMOKE_PROOF"')
+      expect(command.args[1]).toStartWith("set -eu;")
+    }
+  })
+
+  test("executes the platform terminal proof with a spaced fixture path", async () => {
+    const root = await mkdtemp(join(tmpdir(), "mongolgpt terminal proof "))
+    const proof = join(root, "proof.txt")
+    try {
+      execFileSync("git", ["init", root])
+      await writeFile(join(root, "README.md"), "before\n")
+      execFileSync("git", ["-C", root, "add", "README.md"])
+      await writeFile(join(root, "README.md"), "after\n")
+      const command = releaseSmokeTerminalCommand()
+      execFileSync(command.command, command.args, {
+        env: { ...process.env, MONGOLGPT_SMOKE_ROOT: root, MONGOLGPT_SMOKE_PROOF: proof },
+      })
+      const text = await readFile(proof, "utf8")
+      expect(text).toContain("README.md")
+      expect(text).toContain("-before")
+      expect(text).toContain("+after")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 })
