@@ -10,8 +10,25 @@ import {
 async function git(...args: string[]) {
   const result = Bun.spawn(["git", ...args], { stdout: "pipe", stderr: "pipe" })
   const output = await new Response(result.stdout).text()
-  await new Response(result.stderr).text()
-  if ((await result.exited) !== 0) throw new Error("Pinned Console source preparation failed")
+  const error = await new Response(result.stderr).text()
+  if ((await result.exited) !== 0) {
+    const reason =
+      [
+        "would be overwritten",
+        "patch does not apply",
+        "not a valid",
+        "unknown revision",
+        "empty ident",
+        "Author identity unknown",
+        "Committer identity unknown",
+        "not something",
+        "invalid reference",
+        "no changes added",
+        "nothing to commit",
+      ].find((value) => error.includes(value)) ?? "unclassified"
+    console.error(JSON.stringify({ failedGitOperation: args[0], reason }))
+    throw new Error("Pinned Console source preparation failed")
+  }
   return output
 }
 

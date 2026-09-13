@@ -46,11 +46,18 @@ test("website hotfix is opt-in, source-pinned and guarded before its only deploy
   const workflow = Bun.YAML.parse(source) as {
     on: { workflow_dispatch: { inputs: { auth_ui_only: { default: boolean } } } }
     concurrency: { group: string; "cancel-in-progress": boolean }
-    jobs: { deploy: { environment: string; steps: Array<{ name: string; if?: string; run?: string }> } }
+    jobs: {
+      deploy: {
+        environment: string
+        steps: Array<{ name: string; if?: string; run?: string; with?: Record<string, unknown> }>
+      }
+    }
   }
   expect(workflow.on.workflow_dispatch.inputs.auth_ui_only.default).toBe(false)
   expect(workflow.concurrency).toEqual({ group: "cloudflare-deploy-dev", "cancel-in-progress": false })
   expect(workflow.jobs.deploy.environment).toBe("dev")
+  const checkout = workflow.jobs.deploy.steps.find((step) => step.name === "Checkout repository")
+  expect(checkout?.with?.["fetch-depth"]).toBe("${{ inputs.auth_ui_only && '0' || '1' }}")
   const prepare = workflow.jobs.deploy.steps.find((step) => step.name === "Prepare the pinned website-only release")
   expect(prepare?.if).toBe("inputs.auth_ui_only")
   expect(prepare?.run).toContain("bun script/prepare-console-auth-release.ts")
