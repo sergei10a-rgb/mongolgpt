@@ -1,5 +1,6 @@
 import {
   ConsoleUiDeploymentGuardError,
+  describeConsoleUiDeploymentDiff,
   verifyConsoleUiDeploymentDiff,
 } from "../packages/script/src/console-ui-deployment-guard"
 
@@ -7,7 +8,13 @@ try {
   if (process.argv.length !== 3) throw new ConsoleUiDeploymentGuardError()
   const file = Bun.file(process.argv[2])
   if (!(await file.exists()) || file.size > 16 * 1024 * 1024) throw new ConsoleUiDeploymentGuardError()
-  console.log(JSON.stringify(verifyConsoleUiDeploymentDiff(await file.json())))
+  const value = await file.json()
+  try {
+    console.log(JSON.stringify(verifyConsoleUiDeploymentDiff(value)))
+  } catch (error) {
+    console.error(JSON.stringify(describeConsoleUiDeploymentDiff(value)))
+    throw error
+  }
 } catch (error) {
   console.error("Dev Console UI deployment rejected; private diff content was not printed.")
   console.error(

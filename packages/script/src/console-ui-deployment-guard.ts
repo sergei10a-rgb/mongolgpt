@@ -108,6 +108,69 @@ export function verifyConsoleUiDeploymentDiff(value: unknown) {
   }
 }
 
+export function describeConsoleUiDeploymentDiff(value: unknown) {
+  if (!Array.isArray(value) || value.length > 2_000) return { validArray: false }
+  const resources = new Map([
+    [scriptUrn, "console-worker"],
+    [builderUrn, "local-builder"],
+    [urlUrn, "worker-url"],
+    [siteUrn, "console-component"],
+    [workerUrn, "worker-component"],
+    [stackUrn, "stack"],
+  ])
+  const operations = [
+    "same",
+    "update",
+    "create",
+    "delete",
+    "replace",
+    "create-replacement",
+    "delete-replaced",
+    "read",
+    "refresh",
+    "read-replacement",
+    "discard",
+    "remove-pending-replace",
+  ]
+  const keys = [
+    ...workerInputs,
+    ...computed,
+    "create",
+    "update",
+    "dir",
+    "environment",
+    "triggers",
+    "__provider",
+    "enabled",
+    "previewEnabled",
+  ]
+  return {
+    entries: value.slice(0, 100).map((raw) => {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { resource: "invalid" }
+      const entry = raw as Record<string, unknown>
+      const before =
+        entry.old && typeof entry.old === "object" ? (entry.old as Record<string, unknown>).inputs : undefined
+      const after =
+        entry.new && typeof entry.new === "object" ? (entry.new as Record<string, unknown>).inputs : undefined
+      const changedInputs =
+        before && after && typeof before === "object" && typeof after === "object"
+          ? keys.filter(
+              (key) =>
+                !isDeepStrictEqual((before as Record<string, unknown>)[key], (after as Record<string, unknown>)[key]),
+            )
+          : []
+      return {
+        resource: typeof entry.urn === "string" ? (resources.get(entry.urn) ?? "other") : "invalid",
+        operation: typeof entry.op === "string" && operations.includes(entry.op) ? entry.op : "unknown",
+        changedInputs,
+        differences: Array.isArray(entry.diffs)
+          ? [...new Set(entry.diffs.map((key) => (typeof key === "string" && keys.includes(key) ? key : "other")))]
+          : [],
+      }
+    }),
+  }
+}
+
 function verify(value: unknown) {
   if (!Array.isArray(value) || !value.length || value.length > 2_000) reject("invalid-preview")
   const seen = new Set<string>()

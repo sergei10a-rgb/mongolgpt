@@ -436,6 +436,24 @@ describe("Console UI deployment guard", () => {
       expect(rejected.stdout.toString()).toBe("")
       expect(rejected.stderr.toString()).toContain('"reason":"invalid-preview"')
       expect(rejected.stderr.toString()).not.toContain("private-do-not-print")
+      await Bun.write(
+        file,
+        JSON.stringify([
+          {
+            op: "private-do-not-print",
+            urn: "private-do-not-print",
+            diffs: ["private-do-not-print"],
+            old: { inputs: { bindings: "private-do-not-print" } },
+            new: { inputs: { bindings: "another-private-value" } },
+          },
+        ]),
+      )
+      const described = Bun.spawnSync([process.execPath, wrapper, file])
+      expect(described.exitCode).toBe(1)
+      expect(described.stderr.toString()).toContain('"resource":"other"')
+      expect(described.stderr.toString()).toContain('"changedInputs":["bindings"]')
+      expect(described.stderr.toString()).not.toContain("private-do-not-print")
+      expect(described.stderr.toString()).not.toContain("another-private-value")
       await Bun.write(file, JSON.stringify([script()]))
       const approved = Bun.spawnSync([process.execPath, wrapper, file])
       expect(approved.exitCode).toBe(0)
