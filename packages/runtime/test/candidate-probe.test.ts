@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test"
+import { createRequire } from "node:module"
+import { fileURLToPath } from "node:url"
 import { candidateProbeLocalOptions, probeCandidateService, probeErrorCode } from "../script/candidate-service-probe"
 import { candidateProbeConfig, candidateProbeContext, candidateProbeFailure } from "../script/probe-dev-runtime"
 import candidate from "../wrangler.candidate.dev.json"
@@ -63,6 +65,78 @@ describe("private candidate probe", () => {
       ).toBe(400)
     }
   })
+  test("bridge executes in workerd without following redirects or forwarding private headers", async () => {
+    const { Miniflare } = createRequire(import.meta.resolve("wrangler"))("miniflare") as {
+      Miniflare: new (options: Record<string, unknown>) => {
+        dispatchFetch(url: string, init?: RequestInit): Promise<Response>
+        dispose(): Promise<void>
+      }
+    }
+    const build = await Bun.build({
+      entrypoints: [fileURLToPath(new URL("../script/candidate-probe-bridge.ts", import.meta.url))],
+      target: "browser",
+      format: "esm",
+    })
+    expect(build.success).toBe(true)
+    const outbound: string[] = []
+    const worker = new Miniflare({
+      host: "127.0.0.1",
+      port: 0,
+      cf: false,
+      workers: [
+        {
+          name: "bridge",
+          compatibilityDate: candidate.compatibility_date,
+          modules: true,
+          script: await build.outputs[0].text(),
+          serviceBindings: { CANDIDATE: "candidate" },
+          outboundService: (request: Request) => {
+            outbound.push(request.url)
+            return new Response(null, { status: 599 })
+          },
+        },
+        {
+          name: "candidate",
+          compatibilityDate: candidate.compatibility_date,
+          modules: true,
+          script: `export default {
+            fetch(request) {
+              const path = new URL(request.url).pathname
+              const origin = request.headers.get("origin")
+              if (path === "/global/health" && origin)
+                return Response.redirect("https://must-not-follow.invalid/", 302)
+              if (path === "/global/health")
+                return Response.json({ healthy: true, service: "mongolgpt-runtime", stage: "dev", version: "${candidate.vars.MONGOLGPT_RUNTIME_VERSION}" })
+              return Response.json({ headers: Object.fromEntries(request.headers) }, { status: origin ? 401 : 403 })
+            }
+          }`,
+        },
+      ],
+    })
+    try {
+      expect(
+        await probeCandidateService((request) =>
+          worker.dispatchFetch(request.url, { headers: Object.fromEntries(request.headers), redirect: "manual" }),
+        ),
+      ).toEqual({ health: 200, wrongOrigin: 403, anonymous: 401, invalidToken: 401 })
+      const response = await worker.dispatchFetch("http://localhost/session", {
+        headers: { origin: candidate.vars.MONGOLGPT_APP_ORIGIN, cookie: "synthetic-private", "x-private": "synthetic" },
+      })
+      expect(response.status).toBe(401)
+      expect((await response.json()) as { headers: Record<string, string> }).toEqual({
+        headers: { origin: candidate.vars.MONGOLGPT_APP_ORIGIN },
+      })
+      const redirect = await worker.dispatchFetch("http://localhost/global/health", {
+        headers: { origin: candidate.vars.MONGOLGPT_APP_ORIGIN },
+        redirect: "manual",
+      })
+      expect(redirect.status).toBe(302)
+      await expect(probeCandidateService(async () => redirect)).rejects.toThrow("HTTP contract")
+      expect(outbound).toEqual([])
+    } finally {
+      await worker.dispose()
+    }
+  }, 30_000)
   test("diagnostics expose only bounded numeric API codes, never error text or credentials", () => {
     expect(
       candidateProbeFailure({

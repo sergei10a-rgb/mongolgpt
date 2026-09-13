@@ -13,6 +13,7 @@ export default {
     const headers: Record<string, string> = {}
     if (origin) headers.origin = origin
     if (authorization) headers.authorization = authorization
-    return env.CANDIDATE.fetch(`https://candidate.invalid${path}`, { method: "GET", headers, redirect: "error" })
+    // This workerd version supports manual, not error; the caller rejects all redirect responses.
+    return env.CANDIDATE.fetch(`https://candidate.invalid${path}`, { method: "GET", headers, redirect: "manual" })
   },
 }
