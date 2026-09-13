@@ -4,6 +4,7 @@ import path from "path"
 import { Effect, Layer } from "effect"
 import { ModelsDev } from "@mongolgpt/core/models-dev"
 import { EventV2 } from "@mongolgpt/core/event"
+import { HostedCredential } from "@mongolgpt/core/hosted-credential"
 import { FSUtil } from "@mongolgpt/core/fs-util"
 import { CrossSpawnSpawner } from "@mongolgpt/core/cross-spawn-spawner"
 import { Global } from "@mongolgpt/core/global"
@@ -2120,4 +2121,67 @@ it.effect("mongolgpt loader keeps Free Auto inside the account-authenticated hos
 
     expect(free(providers)).toBeGreaterThan(0)
   }).pipe(provideMultiInstance),
+)
+
+it.instance(
+  "cached legacy hosted SDK uses fresh gateway credentials without leaking them to upstream free models",
+  () =>
+    Effect.gen(function* () {
+      yield* set("MONGOLGPT_RUNTIME_MODE", "hosted")
+      yield* set("MONGOLGPT_API_KEY", "runtime")
+      yield* set("MONGOLGPT_CONSOLE_URL", "https://console.example.test")
+      yield* Effect.addFinalizer(() => Effect.sync(() => HostedCredential.clear()))
+      const provider = yield* Provider.Service
+      const model = yield* provider.getModel(ProviderV2.ID.mongolgpt, ModelV2.ID.make("free-auto"))
+      const info = yield* provider.getProvider(ProviderV2.ID.mongolgpt)
+      const requests: { url: string; authorization: string | null; redirect: RequestRedirect | undefined }[] = []
+      info.options.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+        requests.push({
+          url: input instanceof Request ? input.url : String(input),
+          authorization: new Headers(init?.headers).get("authorization"),
+          redirect: init?.redirect,
+        })
+        return Response.json({
+          id: "chat-test",
+          object: "chat.completion",
+          created: 1,
+          model: "free-auto",
+          choices: [{ index: 0, message: { role: "assistant", content: "hello" }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        })
+      }
+      const language = yield* provider.getLanguage(model)
+      const prompt = [{ role: "user" as const, content: [{ type: "text" as const, text: "hello" }] }]
+      for (const id of ["first", "refreshed"]) {
+        const token = `e30.${Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 90, jti: id })).toString("base64url")}.signature`
+        expect(HostedCredential.capture(token)).toBe(true)
+        const result = yield* Effect.promise(() => language.doGenerate({ prompt }))
+        expect(result.content).toEqual([{ type: "text", text: "hello" }])
+        expect(requests.at(-1)).toEqual({
+          url: "https://console.example.test/gateway/v1/chat/completions",
+          authorization: `Bearer ${token}`,
+          redirect: "error",
+        })
+      }
+      const publicLanguage = yield* provider.getLanguage({
+        ...model,
+        id: ModelV2.ID.make("big-pickle"),
+        api: { ...model.api, id: "big-pickle", url: "https://opencode.ai/zen/v1" },
+      })
+      yield* Effect.promise(() => publicLanguage.doGenerate({ prompt }))
+      expect(requests.at(-1)?.url).toBe("https://opencode.ai/zen/v1/chat/completions")
+      expect(requests.at(-1)?.authorization).toBe("Bearer public")
+      HostedCredential.clear()
+      yield* Effect.promise(async () => {
+        await expect(language.doGenerate({ prompt })).rejects.toThrow("Cloud нэвтрэх сессийн хугацаа дууссан")
+      })
+      expect(requests).toHaveLength(3)
+    }),
+  {
+    config: {
+      provider: {
+        mongolgpt: { ...mongolgptProviderConfig, api: "https://console.example.test/gateway/v1" },
+      },
+    },
+  },
 )

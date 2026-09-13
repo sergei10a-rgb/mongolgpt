@@ -13,6 +13,7 @@ import { type LanguageModelV3 } from "@ai-sdk/provider"
 import { ModelsDev } from "@mongolgpt/core/models-dev"
 import { EventV2 } from "@mongolgpt/core/event"
 import { HostedCredential } from "@mongolgpt/core/hosted-credential"
+import { productServiceUrls } from "@mongolgpt/core/product"
 import {
   isManagedFreeModel,
   isOpenCodePublicFreeModel,
@@ -38,6 +39,7 @@ import { ModelV2 } from "@mongolgpt/core/model"
 import { ModelStatus } from "./model-status"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { ProviderError } from "./error"
+import { hostedGatewayRequest } from "./hosted-gateway-request"
 
 const OPENAI_HEADER_TIMEOUT_DEFAULT = 10_000
 
@@ -1762,6 +1764,10 @@ export const layer = Layer.effect(
         if (existing) return existing
 
         const customFetch = options["fetch"]
+        const hostedGateway =
+          model.providerID === "mongolgpt" &&
+          HostedCredential.isRuntimePlaceholder(HostedCredential.EnvironmentName, options["apiKey"])
+        const consoleUrl = envs.MONGOLGPT_CONSOLE_URL?.trim() || productServiceUrls.console
         const chunkTimeout = options["chunkTimeout"]
         const headerTimeout = options["headerTimeout"]
         delete options["chunkTimeout"]
@@ -1769,7 +1775,7 @@ export const layer = Layer.effect(
 
         options["fetch"] = async (input: any, init?: BunFetchRequestInit) => {
           const fetchFn = customFetch ?? fetch
-          const opts = init ?? {}
+          const opts = hostedGateway ? hostedGatewayRequest(input, init, consoleUrl) : (init ?? {})
           const chunkAbortCtl = typeof chunkTimeout === "number" && chunkTimeout > 0 ? new AbortController() : undefined
           const headerTimeoutMs = headerTimeout === false ? undefined : headerTimeout
           const headerTimeoutCtl = typeof headerTimeoutMs === "number" ? timeoutController(headerTimeoutMs) : undefined
