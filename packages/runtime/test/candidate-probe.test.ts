@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import { fileURLToPath } from "node:url"
 import { probeCandidateService, probeErrorCode } from "../script/candidate-service-probe"
 import { candidateProbeConfig, candidateProbeContext, candidateProbeFailure } from "../script/probe-dev-runtime"
 import candidate from "../wrangler.candidate.dev.json"
 import { createRuntimeHandler } from "../src/runtime"
+import bridge from "../script/candidate-probe-bridge"
 
 function handler() {
   const runtime = createRuntimeHandler({
@@ -27,46 +27,33 @@ function handler() {
 }
 
 describe("private candidate probe", () => {
-  test("bridges real Node and installed Miniflare Request classes without network access", async () => {
-    const node = Bun.which("node")
-    if (!node) throw new Error("Node runtime is required for the interop regression test")
-    const child = Bun.spawn(
-      [
-        node,
-        "--input-type=module",
-        "-e",
-        `
-      import assert from 'node:assert/strict';
-      import { createRequire } from 'node:module';
-      import { candidateServiceRequest } from ${JSON.stringify(new URL("../script/candidate-service-probe.ts", import.meta.url).href)};
-      const require = createRequire(import.meta.url);
-      const mf = require(require.resolve('miniflare', { paths: [require.resolve('wrangler')] }));
-      const request = new Request('https://candidate.invalid/session', {
-        headers: { origin: 'https://app.dev.mgpt.mn', authorization: 'Bearer invalid' },
-        redirect: 'error', signal: AbortSignal.timeout(1000)
-      });
-      assert.throws(() => new mf.Request(request), /Failed to parse URL/);
-      const response = await candidateServiceRequest({ fetch: async (url, init) => {
-        const converted = new mf.Request(url, init);
-        assert.equal(converted.url, request.url);
-        assert.equal(converted.method, 'GET');
-        assert.equal(converted.redirect, 'error');
-        assert.equal(converted.headers.get('origin'), request.headers.get('origin'));
-        assert.equal(converted.headers.get('authorization'), 'Bearer invalid');
-        return new mf.Response(null, { status: 401 });
-      }}, request);
-      assert.equal(response.status, 401);
-    `,
-      ],
-      {
-        cwd: fileURLToPath(new URL("..", import.meta.url)),
-        stdout: "pipe",
-        stderr: "pipe",
-        timeout: 10_000,
-      },
-    )
-    const error = await new Response(child.stderr).text()
-    expect(await child.exited, error).toBe(0)
+  test("local bridge only forwards fixed read-only probe paths and synthetic auth", async () => {
+    const runtime = handler()
+    const env = { CANDIDATE: { fetch: (url: string, init: RequestInit) => runtime(new Request(url, init)) } }
+    expect(await probeCandidateService(async (request) => bridge.fetch(request, env))).toEqual({
+      health: 200,
+      wrongOrigin: 403,
+      anonymous: 401,
+      invalidToken: 401,
+    })
+    for (const request of [
+      new Request("http://localhost/session", { method: "POST" }),
+      new Request("http://localhost/admin"),
+      new Request("http://localhost/session", { headers: { origin: "https://evil.invalid" } }),
+      new Request("http://localhost/session", { headers: { authorization: "Bearer actual-token-not-allowed" } }),
+    ]) {
+      expect(
+        (
+          await bridge.fetch(request, {
+            CANDIDATE: {
+              fetch: async () => {
+                throw new Error("must not forward")
+              },
+            },
+          })
+        ).status,
+      ).toBe(400)
+    }
   })
   test("diagnostics expose only bounded numeric API codes, never error text or credentials", () => {
     expect(

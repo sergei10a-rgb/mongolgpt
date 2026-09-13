@@ -1,24 +1,15 @@
 import { writeFile } from "node:fs/promises"
 import { isAbsolute } from "node:path"
 import { fileURLToPath } from "node:url"
+import type { Unstable_DevWorker } from "wrangler"
 import candidate from "../wrangler.candidate.dev.json" with { type: "json" }
 
-type CandidateService = { fetch(input: string, init: RequestInit): Promise<Response> }
-
-export function candidateServiceRequest(service: CandidateService, request: Request) {
-  // Miniflare uses its own Request class and cannot accept Node's native Request instance.
-  return service.fetch(request.url, {
-    method: request.method,
-    headers: Object.fromEntries(request.headers),
-    redirect: request.redirect,
-    signal: request.signal,
-  })
-}
+type ProbeResponse = Response | Awaited<ReturnType<Unstable_DevWorker["fetch"]>>
 
 export type ProbeProgress = { check: string; status?: number; json?: boolean; health?: boolean }
 
 export async function probeCandidateService(
-  request: (input: Request) => Promise<Response>,
+  request: (input: Request) => Promise<ProbeResponse>,
   observe: (progress: ProbeProgress) => void = () => {},
 ) {
   const checks: { name: string; path: string; status: number; headers: Record<string, string> }[] = [
@@ -93,22 +84,40 @@ async function main() {
   let phase = "module_load"
   let progress: ProbeProgress | undefined
   try {
-    const { getPlatformProxy } = await import("wrangler")
+    const { unstable_dev } = await import("wrangler")
     phase = "proxy_setup"
-    const platform = await getPlatformProxy<{ CANDIDATE: CandidateService }>({
-      configPath,
+    // Run the probe in a local Worker so app Origin headers never enter Miniflare's protected /cdn-cgi RPC endpoint.
+    const platform = await unstable_dev(fileURLToPath(new URL("./candidate-probe-bridge.ts", import.meta.url)), {
+      config: configPath,
+      local: true,
+      ip: "127.0.0.1",
+      port: 0,
       persist: false,
-      remoteBindings: true,
+      logLevel: "none",
+      experimental: {
+        disableExperimentalWarning: true,
+        disableDevRegistry: true,
+        watch: false,
+        enableContainers: false,
+      },
     })
     phase = "http_contract"
     const result = await probeCandidateService(
-      (request) => candidateServiceRequest(platform.env.CANDIDATE, request),
+      async (request) => {
+        const response = await platform.fetch(new URL(request.url).pathname, {
+          method: "GET",
+          headers: Object.fromEntries(request.headers),
+          redirect: "error",
+          signal: request.signal,
+        })
+        return response
+      },
       (value) => {
         progress = value
       },
     ).finally(async () => {
       try {
-        await platform.dispose()
+        await platform.stop()
       } catch (error) {
         phase = "proxy_cleanup"
         throw error

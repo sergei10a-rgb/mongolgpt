@@ -79,7 +79,7 @@ async function probe() {
     const configPath = join(folder, "wrangler.json")
     const reportPath = join(folder, "result.json")
     await writeFile(configPath, JSON.stringify(candidateProbeConfig()), { mode: 0o600, flag: "wx" })
-    // Wrangler's Node-only proxy invokes a private service binding; it does not deploy or expose the candidate.
+    // A loopback-only local Worker invokes the remote service; it never deploys or exposes the candidate.
     console.log("CANDIDATE_PROBE_PHASE private_service")
     try {
       await runCandidateCommand(
