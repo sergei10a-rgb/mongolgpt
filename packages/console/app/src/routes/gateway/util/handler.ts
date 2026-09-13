@@ -407,8 +407,8 @@ export async function handler(
     }
     logger.metric({ response_status: res.status })
 
-    // Handle non-streaming response
-    if (!isStream || [400, 404, 429].includes(res.status)) {
+    // Upstream HTTP errors are non-streaming even when the request asked for a stream.
+    if (!isStream || res.status >= 400) {
       const json = await res.json()
       await rateLimiter?.track()
       const usage = providerInfo.extractUsage(json)

@@ -13,6 +13,7 @@ const endpoints = { baseFree: "", openrouter: "", nvidia: "", byok: "" }
 const authState = { credentials: null as string | null, plan: false }
 const state = {
   metrics: [] as Array<Record<string, unknown>>,
+  planSettlements: [] as Array<{ costInMicroCents: number; tokens: number } | undefined>,
   get usageRows() {
     return sqlite
       .query(
@@ -139,7 +140,14 @@ await mock.module("@mongolgpt/console-core/subscription.js", () => ({
 const planQuota = await import("./plan-quota")
 await mock.module("./plan-quota", () => ({
   ...planQuota,
-  reservePlanQuota: async () => ({ allowed: true, reservation: { settle: async () => undefined } }),
+  reservePlanQuota: async () => ({
+    allowed: true,
+    reservation: {
+      settle: async (actual?: { costInMicroCents: number; tokens: number }) => {
+        state.planSettlements.push(actual)
+      },
+    },
+  }),
 }))
 
 await mock.module("@mongolgpt/console-core/drizzle/index.js", () => ({
@@ -224,6 +232,7 @@ beforeEach(() => {
   authState.credentials = null
   authState.plan = false
   state.metrics.length = 0
+  state.planSettlements.length = 0
   state.providerAttempts.length = 0
   state.circuit.length = 0
 })
@@ -609,5 +618,165 @@ describe("gateway handler HTTP boundary", () => {
       enrichment: { plan: "byok" },
     })
     expect(state.providerAttempts).toEqual([])
+  })
+
+  const terminalStatuses = [401, 403, 424, 500] as const
+  const terminalCases = [
+    ...terminalStatuses.flatMap((status) => [
+      { status, stream: false, format: "oa-compat" as const },
+      { status, stream: true, format: "oa-compat" as const },
+    ]),
+    { status: 403, stream: true, format: "anthropic" as const },
+  ]
+
+  test.each(terminalCases)(
+    "releases paid quota without usage for terminal upstream HTTP $status stream=$stream format=$format",
+    async ({ status, stream, format }) => {
+      authState.plan = true
+      sqlite
+        .query(
+          "insert into plan_subscription(id,workspace_id,invoice_id,plan,status,time_period_start,time_period_end) values ('pln_gateway_e2e','wrk_gateway_e2e','inv_gateway_e2e','pro','active',?,?)",
+        )
+        .run(Date.now() - 86400000, Date.now() + 86400000)
+      let upstreamCalls = 0
+      using provider = Bun.serve({
+        hostname: "127.0.0.1",
+        port: 0,
+        fetch() {
+          upstreamCalls++
+          return Response.json(
+            {
+              error: {
+                type: "SyntheticTerminalError",
+                message:
+                  status === 403
+                    ? "OpenCode's free tier can only be used in OpenCode."
+                    : `synthetic terminal ${status}`,
+              },
+            },
+            { status },
+          )
+        },
+      })
+      endpoints.openrouter = `http://127.0.0.1:${provider.port}/v1`
+
+      const response = await handler(
+        {
+          request: new Request("https://dev.mgpt.mn/gateway/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              authorization: "Bearer synthetic-account-token",
+              "content-type": "application/json",
+              "accept-language": "mn",
+            },
+            body: JSON.stringify(
+              format === "anthropic"
+                ? {
+                    model: "synthetic-paid",
+                    messages: [{ role: "user", content: [{ type: "text", text: "terminal stream check" }] }],
+                    stream,
+                  }
+                : {
+                    model: "synthetic-paid",
+                    messages: [{ role: "user", content: "terminal stream check" }],
+                    stream,
+                  },
+            ),
+          }),
+        } as Parameters<typeof handler>[0],
+        {
+          format,
+          modelList: "full",
+          parseApiKey: (headers) => headers.get("authorization")?.replace(/^Bearer /, ""),
+          parseModel: (_url, body) => body.model,
+          parseVariant: () => undefined,
+          parseIsStream: (_url, body) => body.stream === true,
+        },
+      )
+      const text = await response.text()
+      const payload = JSON.parse(text) as { error?: { type?: string; message?: string } }
+
+      expect(response.status, text).toBe(status)
+      expect(upstreamCalls).toBe(1)
+      expect(state.providerAttempts).toHaveLength(1)
+      expect(state.providerAttempts[0]).toMatchObject({
+        type: "provider-attempt",
+        provider: "openrouter-free",
+        responseStatus: status,
+      })
+      expect(text.trim()).not.toBe("")
+      expect(text.trim().startsWith("data:")).toBe(false)
+      expect(payload.error?.type).toBe("SyntheticTerminalError")
+      expect(payload.error?.message).toContain(
+        status === 403 ? "OpenCode's free tier can only be used in OpenCode." : `synthetic terminal ${status}`,
+      )
+      expect(state.usageRows).toHaveLength(0)
+      expect(sqlite.query("select count(*) count from finance_cost_entry").get()).toEqual({ count: 0 })
+      expect(state.planSettlements).toEqual([{ costInMicroCents: 0, tokens: 0 }])
+    },
+  )
+
+  test("settles measured paid streaming usage while preserving usage evidence", async () => {
+    authState.plan = true
+    sqlite
+      .query(
+        "insert into plan_subscription(id,workspace_id,invoice_id,plan,status,time_period_start,time_period_end) values ('pln_gateway_e2e','wrk_gateway_e2e','inv_gateway_e2e','pro','active',?,?)",
+      )
+      .run(Date.now() - 86400000, Date.now() + 86400000)
+    using provider = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch() {
+        return new Response(
+          [
+            'data: {"id":"chatcmpl-paid-stream","object":"chat.completion.chunk","model":"synthetic/paid","choices":[{"index":0,"delta":{"content":"synthetic-stream-ok"},"finish_reason":null}]}',
+            'data: {"id":"chatcmpl-paid-stream","object":"chat.completion.chunk","model":"synthetic/paid","choices":[],"usage":{"prompt_tokens":6,"completion_tokens":4,"total_tokens":10}}',
+          ].join("\n\n") + "\n\n",
+          { status: 200, headers: { "content-type": "text/event-stream" } },
+        )
+      },
+    })
+    endpoints.openrouter = `http://127.0.0.1:${provider.port}/v1`
+
+    const response = await handler(
+      {
+        request: new Request("https://dev.mgpt.mn/gateway/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            authorization: "Bearer synthetic-account-token",
+            "content-type": "application/json",
+            "accept-language": "mn",
+          },
+          body: JSON.stringify({
+            model: "synthetic-paid",
+            messages: [{ role: "user", content: "paid stream usage check" }],
+            stream: true,
+          }),
+        }),
+      } as Parameters<typeof handler>[0],
+      {
+        format: "oa-compat",
+        modelList: "full",
+        parseApiKey: (headers) => headers.get("authorization")?.replace(/^Bearer /, ""),
+        parseModel: (_url, body) => body.model,
+        parseVariant: () => undefined,
+        parseIsStream: (_url, body) => body.stream === true,
+      },
+    )
+    const text = await response.text()
+
+    expect(response.status, text).toBe(200)
+    expect(text).toContain("synthetic-stream-ok")
+    expect(text).toContain('"cost"')
+    expect(state.usageRows).toHaveLength(1)
+    expect(state.usageRows[0]).toMatchObject({
+      model: "synthetic-paid",
+      provider: "openrouter-free",
+      inputTokens: 6,
+      outputTokens: 4,
+      enrichment: { plan: "pro" },
+    })
+    expect(state.planSettlements[0]).toEqual({ costInMicroCents: expect.any(Number), tokens: 10 })
+    expect(state.planSettlements[0]?.costInMicroCents).toBeGreaterThan(0)
   })
 })
