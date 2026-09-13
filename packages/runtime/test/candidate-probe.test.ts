@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { fileURLToPath } from "node:url"
 import { probeCandidateService, probeErrorCode } from "../script/candidate-service-probe"
-import { candidateProbeConfig, candidateProbeContext } from "../script/probe-dev-runtime"
+import { candidateProbeConfig, candidateProbeContext, candidateProbeFailure } from "../script/probe-dev-runtime"
 import candidate from "../wrangler.candidate.dev.json"
 import { createRuntimeHandler } from "../src/runtime"
 
@@ -69,6 +69,14 @@ describe("private candidate probe", () => {
     expect(await child.exited, error).toBe(0)
   })
   test("diagnostics expose only bounded numeric API codes, never error text or credentials", () => {
+    expect(
+      candidateProbeFailure({
+        kind: "TypeError",
+        message: "private",
+        progress: { check: "health", status: 503, json: true, body: "private" },
+      }),
+    ).toEqual({ kind: "TypeError", check: "health", status: 503, json: true })
+    expect(candidateProbeFailure({ kind: "private", progress: { check: "private", status: 200 } })).toEqual({})
     expect(probeErrorCode({ cause: { code: 10000, message: "private" } })).toBe(10000)
     expect(probeErrorCode({ code: "private-token", message: "private" })).toBeUndefined()
     expect(probeErrorCode({ code: Infinity })).toBeUndefined()

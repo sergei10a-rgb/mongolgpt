@@ -9,6 +9,35 @@ import {
   verifyCandidateRoutes,
 } from "./stage-dev-runtime"
 
+export function candidateProbeFailure(value: unknown) {
+  if (!value || typeof value !== "object") return {}
+  const result: Record<string, string | number | boolean> = {}
+  if (
+    "kind" in value &&
+    ["Error", "TypeError", "SyntaxError", "AbortError", "TimeoutError"].includes(String(value.kind))
+  )
+    result.kind = String(value.kind)
+  if (!("progress" in value) || !value.progress || typeof value.progress !== "object") return result
+  const progress = value.progress
+  if (
+    !("check" in progress) ||
+    !["health", "wrongOrigin", "anonymous", "invalidToken"].includes(String(progress.check))
+  )
+    return result
+  result.check = String(progress.check)
+  if (
+    "status" in progress &&
+    typeof progress.status === "number" &&
+    Number.isInteger(progress.status) &&
+    progress.status >= 100 &&
+    progress.status < 600
+  )
+    result.status = progress.status
+  if ("json" in progress && typeof progress.json === "boolean") result.json = progress.json
+  if ("health" in progress && typeof progress.health === "boolean") result.health = progress.health
+  return result
+}
+
 export function candidateProbeContext(env: NodeJS.ProcessEnv) {
   if (
     env.GITHUB_ACTIONS !== "true" ||
@@ -60,6 +89,7 @@ async function probe() {
     } catch {
       if (await Bun.file(reportPath).exists()) {
         const failure: unknown = await Bun.file(reportPath).json()
+        console.log("CANDIDATE_PROBE_HTTP", JSON.stringify(candidateProbeFailure(failure)))
         if (failure && typeof failure === "object" && "failure" in failure) {
           const categories = ["proxy_setup", "http_contract", "proxy_cleanup", "module_load"]
           if (categories.includes(String(failure.failure))) console.log(`CANDIDATE_PROBE_FAILURE ${failure.failure}`)

@@ -15,7 +15,12 @@ export function candidateServiceRequest(service: CandidateService, request: Requ
   })
 }
 
-export async function probeCandidateService(request: (input: Request) => Promise<Response>) {
+export type ProbeProgress = { check: string; status?: number; json?: boolean; health?: boolean }
+
+export async function probeCandidateService(
+  request: (input: Request) => Promise<Response>,
+  observe: (progress: ProbeProgress) => void = () => {},
+) {
   const checks: { name: string; path: string; status: number; headers: Record<string, string> }[] = [
     { name: "health", path: "/global/health", status: 200, headers: {} },
     { name: "wrongOrigin", path: "/session", status: 403, headers: {} },
@@ -29,6 +34,7 @@ export async function probeCandidateService(request: (input: Request) => Promise
   ]
   const result: Record<string, number> = {}
   for (const check of checks) {
+    observe({ check: check.name })
     const response = await request(
       new Request(`https://candidate.invalid${check.path}`, {
         method: "GET",
@@ -38,6 +44,11 @@ export async function probeCandidateService(request: (input: Request) => Promise
       }),
     )
     try {
+      observe({
+        check: check.name,
+        status: response.status,
+        json: !!response.headers.get("content-type")?.startsWith("application/json"),
+      })
       if (response.status !== check.status || !response.headers.get("content-type")?.startsWith("application/json"))
         throw new Error("Candidate HTTP contract failed")
       if (check.name === "health") {
@@ -58,13 +69,13 @@ export async function probeCandidateService(request: (input: Request) => Promise
           reader.releaseLock()
         }
         const body = JSON.parse(Buffer.concat(chunks).toString("utf8"))
-        if (
-          body?.healthy !== true ||
-          body.service !== "mongolgpt-runtime" ||
-          body.stage !== "dev" ||
-          body.version !== candidate.vars.MONGOLGPT_RUNTIME_VERSION
-        )
-          throw new Error("Candidate health content failed")
+        const healthy =
+          body?.healthy === true &&
+          body.service === "mongolgpt-runtime" &&
+          body.stage === "dev" &&
+          body.version === candidate.vars.MONGOLGPT_RUNTIME_VERSION
+        observe({ check: check.name, status: response.status, json: true, health: healthy })
+        if (!healthy) throw new Error("Candidate health content failed")
       }
       result[check.name] = response.status
     } finally {
@@ -80,6 +91,7 @@ async function main() {
   if (process.argv.length !== 4 || !isAbsolute(configPath) || !isAbsolute(reportPath))
     throw new Error("Private probe paths are invalid")
   let phase = "module_load"
+  let progress: ProbeProgress | undefined
   try {
     const { getPlatformProxy } = await import("wrangler")
     phase = "proxy_setup"
@@ -89,8 +101,11 @@ async function main() {
       remoteBindings: true,
     })
     phase = "http_contract"
-    const result = await probeCandidateService((request) =>
-      candidateServiceRequest(platform.env.CANDIDATE, request),
+    const result = await probeCandidateService(
+      (request) => candidateServiceRequest(platform.env.CANDIDATE, request),
+      (value) => {
+        progress = value
+      },
     ).finally(async () => {
       try {
         await platform.dispose()
@@ -101,7 +116,13 @@ async function main() {
     })
     await writeFile(reportPath, JSON.stringify(result), { mode: 0o600, flag: "wx" })
   } catch (error) {
-    await writeFile(reportPath, JSON.stringify({ failure: phase, code: probeErrorCode(error) }), { mode: 0o600 })
+    const kind =
+      error instanceof Error && ["TypeError", "SyntaxError", "AbortError", "TimeoutError"].includes(error.name)
+        ? error.name
+        : "Error"
+    await writeFile(reportPath, JSON.stringify({ failure: phase, code: probeErrorCode(error), progress, kind }), {
+      mode: 0o600,
+    })
     throw new Error("Private probe failed")
   }
 }
