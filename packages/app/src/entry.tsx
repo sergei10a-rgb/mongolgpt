@@ -107,6 +107,7 @@ if (!(root instanceof HTMLElement) && import.meta.env.DEV) {
 }
 
 const runtime = resolveWebRuntime({
+  embedded: import.meta.env.VITE_MONGOLGPT_EMBEDDED === "true",
   ownerPreview: import.meta.env.VITE_MONGOLGPT_PREVIEW_ENABLED === "true",
   dev: import.meta.env.DEV,
   origin: location.origin,

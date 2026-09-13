@@ -23,6 +23,23 @@ describe("resolveChannel", () => {
 })
 
 describe("resolveRuntimeMetadata", () => {
+  test("leaves the embedded CLI runtime address to the browser origin", () => {
+    expect(
+      resolveRuntimeMetadata({
+        VITE_MONGOLGPT_EMBEDDED: "true",
+        VITE_MONGOLGPT_SERVER_URL: "https://runtime.dev.mgpt.mn",
+      }),
+    ).toEqual({ mode: "local-bridge", serverUrl: "" })
+  })
+
+  test.each([
+    { VITE_MONGOLGPT_APP_URL: "https://app.dev.mgpt.mn" },
+    { VITE_MONGOLGPT_PUBLIC_URL: "https://dev.mgpt.mn" },
+    { VITE_MONGOLGPT_PREVIEW_ENABLED: "true" },
+  ])("does not let embedded builds weaken hosted deployment guards: %j", (env) => {
+    expect(() => resolveRuntimeMetadata({ ...env, VITE_MONGOLGPT_EMBEDDED: "true" })).toThrow("Embedded CLI UI")
+  })
+
   test("keeps the local Web development bridge when no hosted metadata is present", () => {
     expect(resolveRuntimeMetadata({})).toEqual({
       mode: "local-bridge",

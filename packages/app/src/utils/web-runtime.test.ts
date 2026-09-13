@@ -2,6 +2,33 @@ import { describe, expect, test } from "bun:test"
 import { resolveDefaultServerUrl, resolveWebRuntime } from "./web-runtime"
 
 describe("resolveWebRuntime", () => {
+  test.each([
+    "http://localhost:61777",
+    "http://127.0.0.1:61777",
+    "http://127.12.34.56:61777",
+    "http://[::1]:61777",
+    "http://192.168.1.25:61777",
+    "https://coding.example.test",
+  ])("connects the embedded CLI web UI to its serving origin %s", (origin) => {
+    expect(resolveWebRuntime({ dev: false, embedded: true, origin })).toEqual({
+      mode: "local-bridge",
+      serverUrl: origin,
+    })
+  })
+
+  test("does not send an embedded CLI connection to a server inherited from the build environment", () => {
+    expect(
+      resolveWebRuntime({
+        dev: false,
+        embedded: true,
+        origin: "http://127.0.0.1:61777",
+        serverUrl: "https://runtime.dev.mgpt.mn",
+        serverHost: "localhost",
+        serverPort: "4096",
+      }),
+    ).toEqual({ mode: "local-bridge", serverUrl: "http://127.0.0.1:61777" })
+  })
+
   test("infers hosted runtime from app domain when no runtime is configured", () => {
     expect(
       resolveWebRuntime({

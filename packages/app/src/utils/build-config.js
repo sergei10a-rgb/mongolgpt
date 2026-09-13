@@ -50,6 +50,12 @@ export function resolveReleaseSha(env = process.env) {
 }
 
 export function resolveRuntimeMetadata(env = process.env) {
+  if (env.VITE_MONGOLGPT_EMBEDDED === "true") {
+    if (hostedWeb(env) || env.VITE_MONGOLGPT_PREVIEW_ENABLED === "true") {
+      throw new Error("Embedded CLI UI cannot use hosted deployment metadata")
+    }
+    return { mode: "local-bridge", serverUrl: "" }
+  }
   const appUrl = env.VITE_MONGOLGPT_APP_URL ? httpUrl(env.VITE_MONGOLGPT_APP_URL) : undefined
   const publicUrl = env.VITE_MONGOLGPT_PUBLIC_URL ? httpUrl(env.VITE_MONGOLGPT_PUBLIC_URL) : undefined
   const host = env.VITE_MONGOLGPT_SERVER_HOST?.trim()

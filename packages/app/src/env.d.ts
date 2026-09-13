@@ -1,4 +1,5 @@
 interface ImportMetaEnv {
+  readonly VITE_MONGOLGPT_EMBEDDED?: string
   readonly VITE_MONGOLGPT_SERVER_HOST: string
   readonly VITE_MONGOLGPT_SERVER_PORT: string
   readonly VITE_MONGOLGPT_SERVER_URL?: string

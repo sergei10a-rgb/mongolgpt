@@ -12,6 +12,7 @@ type ResolveWebRuntimeInput = {
   serverPort?: string
   serverUrl?: string
   ownerPreview?: boolean
+  embedded?: boolean
 }
 
 function normalizeHttpUrl(input: string) {
@@ -36,6 +37,7 @@ function isLoopback(url: string) {
 export function resolveWebRuntime(input: ResolveWebRuntimeInput): WebRuntime {
   const configured = input.serverUrl?.trim()
   const normalizedOrigin = normalizeHttpUrl(input.origin)
+  if (input.embedded) return { mode: "local-bridge", serverUrl: normalizedOrigin }
   const inferredServerUrl = inferHostedServerUrl(normalizedOrigin)
 
   const serverUrl = configured
