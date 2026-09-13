@@ -1,0 +1,62 @@
+name: Probe private dev runtime candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "PROBE DEV RUNTIME CANDIDATE (no deployment, data writes, or model calls)"
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  probe:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: dev
+    steps:
+      - name: Validate private probe confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = "PROBE DEV RUNTIME CANDIDATE"
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Verify private probe boundaries
+        run: |
+          bun run --cwd packages/runtime typecheck
+          bun --cwd packages/runtime test test/candidate-probe.test.ts test/candidate-staging.test.ts
+
+      - name: Probe only the existing private candidate
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_CANDIDATE_CONFIRMATION: ${{ inputs.confirmation }}
+        run: bun packages/runtime/script/probe-dev-runtime.ts
+
+      - name: Upload only the private probe receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dev-runtime-probe-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: error
+          path: ${{ runner.temp }}/runtime-candidate-probe.json
