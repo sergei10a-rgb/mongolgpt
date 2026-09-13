@@ -139,11 +139,13 @@ describe("failed native archive pair publication", () => {
 
   test("a failed second archive upload never publishes a partial revision", async () => {
     const { temp, root, store, checkpoint, accepted } = fixture!
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 20_000)
-    try {
-      await writeFile(join(root, "state.txt"), "not accepted")
-      for (const mode of ["unavailable", "wrong hash"]) {
+    await writeFile(join(root, "state.txt"), "not accepted")
+    // Each publication and restore has its own bound, as in the WAL-pair test.
+    // Sharing one timer can abort the restore after two successful rejection checks.
+    for (const mode of ["unavailable", "wrong hash"]) {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 20_000)
+      try {
         let uploads = 0
         const calls = store.calls.length
         await expect(
@@ -163,16 +165,31 @@ describe("failed native archive pair publication", () => {
         expect(uploads).toBe(2)
         expect(store.calls.slice(calls)).not.toContain("/v1/publish-files")
         expect(store.filesRevision).toEqual(accepted.data)
+      } finally {
+        clearTimeout(timer)
+        controller.abort()
       }
+    }
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 20_000)
+    const start = Date.now()
+    try {
       const replacement = join(temp.path, "replacement")
       await mkdir(replacement)
       await CloudStartup.bootstrap({ root: replacement, request: store.request, signal: controller.signal })
       expect(await readFile(join(replacement, "state.txt"), "utf8")).toBe("accepted")
+    } catch (error) {
+      console.error("NATIVE_PAIR_FAILURE", {
+        phase: "restore-after-rejected-pair",
+        elapsedMs: Date.now() - start,
+        aborted: controller.signal.aborted,
+      })
+      throw error
     } finally {
       clearTimeout(timer)
       controller.abort()
     }
-  }, 30_000)
+  }, 70_000)
 })
 
 async function acceptedPair() {
