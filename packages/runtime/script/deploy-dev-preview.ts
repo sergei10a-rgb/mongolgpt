@@ -112,7 +112,7 @@ export function previewAccessPolicyPayload() {
   }
 }
 
-export async function ensurePreviewAccessApplication(token: string, request: Requester = fetch) {
+export async function ensurePreviewAccessApplication(token: string, request: Requester = fetch, readOnly = false) {
   const organization = await cloudflareAccess(token, "access/organizations", {}, request)
   if (!record(organization.result) || typeof organization.result.auth_domain !== "string")
     throw new Error("Preview Access organization is invalid")
@@ -128,6 +128,7 @@ export async function ensurePreviewAccessApplication(token: string, request: Req
     (value): value is Record<string, unknown> => record(value) && value.domain === hostname,
   )
   if (matches.length > 1) throw new Error("Preview Access hostname has multiple applications")
+  if (readOnly && !matches.length) throw new Error("Preview Access application is missing")
   const application =
     matches[0] ??
     (
@@ -258,6 +259,13 @@ export function verifyPreviewIngress(input: {
 async function deploy() {
   if (process.platform !== "linux" || process.argv.length !== 2) throw new Error("Owner dev preview requires Linux CI")
   const identity = previewDeployContext(process.env)
+  if (process.env.MONGOLGPT_PREVIEW_VERIFY_ONLY === "true") {
+    console.log("PREVIEW_PHASE read_only_candidate")
+    await verify()
+    await verifyDeployedPreview()
+    console.log("Existing owner preview boundaries verified without deployment; browser acceptance was not performed.")
+    return
+  }
   const node = Bun.which("node")
   if (!node) throw new Error("Pinned Node runtime is missing")
   if (!(await Bun.file(join(root, "../app/dist/index.html")).exists())) throw new Error("Preview app build is missing")
@@ -285,21 +293,7 @@ async function deploy() {
     console.log("PREVIEW_PHASE candidate_after")
     const after = await verify()
     if (before.namespaceID !== after.namespaceID) throw new Error("Candidate namespace changed during preview deploy")
-    const ingress = await inspectPreviewIngress(process.env.CLOUDFLARE_API_TOKEN!)
-    if (ingress.publicProtectedDomain !== hostname)
-      throw new Error("Preview protected domain is missing after deployment")
-    await inspectPreviewWorker(process.env.CLOUDFLARE_API_TOKEN!, false)
-    await ensurePreviewAccessApplication(process.env.CLOUDFLARE_ACCESS_API_TOKEN!)
-    for (const path of ["/", "/api/session", "/assets/__preview_boundary__.js"]) {
-      const response = await fetch(`https://${hostname}${path}`, {
-        redirect: "manual",
-        signal: AbortSignal.timeout(15_000),
-      })
-      const location = response.headers.get("Location")
-      void response.body?.cancel()
-      if (response.status !== 302 || !location || new URL(location).origin !== access.teamDomain)
-        throw new Error("Preview anonymous Access boundary failed")
-    }
+    const ingress = await verifyDeployedPreview()
     await writeFile(
       identity.output,
       JSON.stringify(
@@ -323,6 +317,29 @@ async function deploy() {
   } finally {
     await rm(folder, { recursive: true, force: true })
   }
+}
+
+async function verifyDeployedPreview() {
+  console.log("PREVIEW_PHASE verify_ingress")
+  const ingress = await inspectPreviewIngress(process.env.CLOUDFLARE_API_TOKEN!)
+  if (ingress.publicProtectedDomain !== hostname)
+    throw new Error("Preview protected domain is missing after deployment")
+  console.log("PREVIEW_PHASE verify_worker")
+  await inspectPreviewWorker(process.env.CLOUDFLARE_API_TOKEN!, false)
+  console.log("PREVIEW_PHASE verify_access")
+  const access = await ensurePreviewAccessApplication(process.env.CLOUDFLARE_ACCESS_API_TOKEN!, fetch, true)
+  console.log("PREVIEW_PHASE verify_anonymous")
+  for (const path of ["/", "/api/session", "/assets/__preview_boundary__.js"]) {
+    const response = await fetch(`https://${hostname}${path}`, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(15_000),
+    })
+    const location = response.headers.get("Location")
+    void response.body?.cancel()
+    if (response.status !== 302 || !location || new URL(location).origin !== access.teamDomain)
+      throw new Error("Preview anonymous Access boundary failed")
+  }
+  return ingress
 }
 
 async function cloudflareAccess(token: string, path: string, init: RequestInit, request: Requester) {
@@ -372,6 +389,15 @@ async function inspectPreviewWorker(token: string, allowMissing: boolean) {
   const settings = await cloudflareRequest(`${base}/settings`, token, {}, fetch, allowMissing)
   if (settings.notFound === true && allowMissing) return
   const subdomain = await cloudflareRequest(`${base}/subdomain`, token, {}, fetch)
+  if (record(settings.result) && Array.isArray(settings.result.bindings) && record(subdomain.result))
+    console.log(
+      "PREVIEW_METADATA",
+      JSON.stringify({
+        bindings: settings.result.bindings.filter(record).map((value) => ({ name: value.name, type: value.type })),
+        enabled: subdomain.result.enabled,
+        previews_enabled: subdomain.result.previews_enabled,
+      }),
+    )
   verifyPreviewWorker(settings.result, subdomain.result)
 }
 
@@ -497,6 +523,7 @@ if (import.meta.main)
       "Preview Access application list is invalid",
       "Preview Access hostname has multiple applications",
       "Preview Access application response is invalid",
+      "Preview Access application is missing",
       "Preview Access application must have exactly one owner allow policy",
       "Preview Access owner policy mismatch",
       "Preview root zone could not be verified",
@@ -508,10 +535,17 @@ if (import.meta.main)
       "Preview hostname already has DNS records",
       "Preview hostname is already owned by another Worker route",
       "Candidate namespace changed during preview deploy",
+      "Preview protected domain is missing after deployment",
+      "Preview Worker ingress is unverified",
+      "Preview Worker bindings are unverified",
+      "Preview anonymous Access boundary failed",
+      "Cloudflare pagination exceeds preview scope",
     ]
     if (
       error instanceof Error &&
-      (known.includes(error.message) || error.message.startsWith("Preview Access application mismatch:"))
+      (known.includes(error.message) ||
+        error.message.startsWith("Preview Access application mismatch:") ||
+        /^Cloudflare API request failed: \d{3}$/.test(error.message))
     )
       console.error(error.message)
     console.error("Owner dev preview deploy failed; private Cloudflare output was not logged.")

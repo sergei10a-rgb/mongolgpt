@@ -179,6 +179,22 @@ test("missing Access application is created before its policy is verified", asyn
   expect(requests[2].body).toEqual(previewAccessApplicationPayload())
 })
 
+test("read-only verification never creates a missing Access application", async () => {
+  const methods: string[] = []
+  const responses = [response({ success: true, result: organization() }), response({ success: true, result: [] })]
+  await expect(
+    ensurePreviewAccessApplication(
+      "access-token",
+      async (_url, init) => {
+        methods.push(init.method ?? "GET")
+        return responses.shift()!
+      },
+      true,
+    ),
+  ).rejects.toThrow("Preview Access application is missing")
+  expect(methods).toEqual(["GET", "GET"])
+})
+
 test("preexisting Access app or policy mismatch fails closed without overwriting", async () => {
   const weakApplication = { ...accessApplication(), same_site_cookie_attribute: "strict" }
   const applicationRequests: (string | undefined)[] = []

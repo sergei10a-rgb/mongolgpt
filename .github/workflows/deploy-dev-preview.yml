@@ -7,6 +7,11 @@ on:
         description: "DEPLOY OWNER DEV PREVIEW"
         required: true
         type: string
+      verify_only:
+        description: "Read existing preview configuration only; do not deploy or change Access"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: cloudflare-deploy-dev
@@ -44,6 +49,7 @@ jobs:
         uses: ./.github/actions/setup-bun
 
       - name: Check preview boundaries and current UI
+        if: ${{ !inputs.verify_only }}
         run: |
           bun run --cwd packages/console/admin typecheck
           bun --cwd packages/console/admin test ./test/preview.test.ts
@@ -60,6 +66,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCESS_API_TOKEN: ${{ secrets.CLOUDFLARE_ACCESS_API_TOKEN }}
           MONGOLGPT_OWNER_DEV_PREVIEW_CONFIRMATION: ${{ inputs.confirmation }}
+          MONGOLGPT_PREVIEW_VERIFY_ONLY: ${{ inputs.verify_only }}
         run: bun packages/runtime/script/deploy-dev-preview.ts
 
       - name: Upload non-secret deployment receipt
