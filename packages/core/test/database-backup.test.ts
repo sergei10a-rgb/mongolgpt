@@ -70,18 +70,18 @@ async function rows(filename: string) {
 }
 
 describe("encrypted SQLite preservation", () => {
-  let corruptionFixture: Awaited<ReturnType<typeof encryptedCorruptionFixture>> | undefined
+  let backupFixture: Awaited<ReturnType<typeof encryptedBackupFixture>> | undefined
 
   // Encrypt the large synthetic database once. The per-case restore still has
   // its own default deadline, while setup and final Windows cleanup are bounded
   // independently from Bun's five-second test timeout.
   beforeAll(async () => {
-    corruptionFixture = await encryptedCorruptionFixture()
+    backupFixture = await encryptedBackupFixture()
   }, 30_000)
 
   afterAll(async () => {
-    await corruptionFixture?.temp[Symbol.asyncDispose]()
-    corruptionFixture = undefined
+    await backupFixture?.temp[Symbol.asyncDispose]()
+    backupFixture = undefined
   }, 15_000)
 
   test("readonly adapter does not switch journal mode and releases uncached statement handles", async () => {
@@ -177,13 +177,14 @@ describe("encrypted SQLite preservation", () => {
   })
 
   test("never creates a missing source or overwrites an existing destination or SQLite sidecar", async () => {
+    const fixture = backupFixture!
     await using temp = await tmpdir()
     const source = join(temp.path, "source.sqlite")
     const archive = join(temp.path, "archive")
-    const key = randomBytes(32)
+    const key = fixture.key
     await expect(Effect.runPromise(DatabaseBackup.create({ source, destination: archive, key }))).rejects.toThrow()
     expect(await readdir(temp.path)).toEqual([])
-    await seed(source)
+    await writeFile(source, await readFile(fixture.source))
     const before = await rows(source)
     await expect(Effect.runPromise(DatabaseBackup.create({ source, destination: source, key }))).rejects.toThrow(
       "Зорилтот",
@@ -194,7 +195,8 @@ describe("encrypted SQLite preservation", () => {
     )
     expect(await readFile(archive, "utf8")).toBe("existing")
     const valid = join(temp.path, "valid")
-    await Effect.runPromise(DatabaseBackup.create({ source, destination: valid, key }))
+    // Reuse the real setup archive; this case tests path rejection, not encryption throughput.
+    await writeFile(valid, fixture.archive)
     await expect(
       Effect.runPromise(DatabaseBackup.restore({ source: valid, destination: source, key })),
     ).rejects.toThrow("Зорилтот")
@@ -213,7 +215,7 @@ describe("encrypted SQLite preservation", () => {
   test.each(["wrong key", "magic", "nonce", "ciphertext", "tag", "truncated archive"] as const)(
     "rejects %s without publishing plaintext",
     async (corruption) => {
-      const fixture = corruptionFixture!
+      const fixture = backupFixture!
       const bytes = fixture.archive
       const altered = Buffer.from(bytes)
       const position = { magic: 0, nonce: 26, ciphertext: 100, tag: bytes.length - 1 }
@@ -327,7 +329,7 @@ describe("encrypted SQLite preservation", () => {
   })
 })
 
-async function encryptedCorruptionFixture() {
+async function encryptedBackupFixture() {
   const temp = await tmpdir()
   const source = join(temp.path, "source.sqlite")
   const archive = join(temp.path, "archive")
@@ -335,7 +337,7 @@ async function encryptedCorruptionFixture() {
   try {
     await seed(source)
     await Effect.runPromise(DatabaseBackup.create({ source, destination: archive, key }))
-    return { temp, key, archive: await readFile(archive) }
+    return { temp, source, key, archive: await readFile(archive) }
   } catch (error) {
     await temp[Symbol.asyncDispose]()
     throw error
