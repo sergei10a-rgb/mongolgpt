@@ -31,6 +31,7 @@ test("payment deployment is manually confirmed, disabled, owner/dev-only and gua
   )
   expect(workflow.env.MONGOLGPT_DOMAIN).toBe("${{ vars.MONGOLGPT_DOMAIN }}")
   expect(workflow.env.MONGOLGPT_PAYMENT_ENVIRONMENT).toBe("disabled")
+  expect(workflow.env.MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS).toBe("true")
   expect(workflow.env.PULUMI_TF_BRIDGE_ACCURATE_PF_BRIDGE_PREVIEW).toBe("true")
   for (const flag of [
     "REAL_PAYMENTS",
@@ -42,7 +43,6 @@ test("payment deployment is manually confirmed, disabled, owner/dev-only and gua
     "MONITORING",
     "SHARE_SERVICE",
     "SYNC_SERVICE",
-    "ROOT_PREVIEW_ALIAS",
   ])
     expect(workflow.env[`MONGOLGPT_ENABLE_${flag}`]).toBe("false")
   const steps = workflow.jobs.deploy.steps

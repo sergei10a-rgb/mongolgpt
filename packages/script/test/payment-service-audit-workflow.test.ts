@@ -28,12 +28,12 @@ test("payment service audit is manual, owner/dev-scoped and never deploys", asyn
   expect(workflow.env.PULUMI_TF_BRIDGE_ACCURATE_PF_BRIDGE_PREVIEW).toBe("true")
   expect(workflow.env.MONGOLGPT_DOMAIN).toBe("${{ vars.MONGOLGPT_DOMAIN }}")
   expect(workflow.env.MONGOLGPT_PAYMENT_ENVIRONMENT).toBe("disabled")
+  expect(workflow.env.MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS).toBe("true")
   for (const name of [
     "MONGOLGPT_ENABLE_REAL_PAYMENTS",
     "MONGOLGPT_ENABLE_ADMIN",
     "MONGOLGPT_ENABLE_D1_BACKUPS",
     "MONGOLGPT_ENABLE_MONITORING",
-    "MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS",
     "MONGOLGPT_ENABLE_BUSINESS_INTEGRATIONS",
     "MONGOLGPT_ENABLE_LEGACY_STRIPE",
     "MONGOLGPT_ENABLE_SHARE_SERVICE",

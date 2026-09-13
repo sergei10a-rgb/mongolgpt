@@ -16,7 +16,8 @@ env:
   MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
   MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
   MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true"
-  MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS: "false"
+  # Preserve the existing dev console aliases while targeting only payment worker code.
+  MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS: "true"
   MONGOLGPT_ENABLE_ADMIN: "false"
   MONGOLGPT_ENABLE_ANALYTICS: "false"
   MONGOLGPT_ENABLE_D1_BACKUPS: "false"
