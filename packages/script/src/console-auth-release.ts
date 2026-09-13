@@ -1,6 +1,13 @@
 export const consoleBaselineCommit = "9f4f5757eedc1bb02eb95160bdaa87e04ec59dc5"
 export const consoleFixCommit = "41d58f4dbc8c9b88cdf19e22745b126ce3f54235"
 
+export function isConsoleInstallModeChange(diff: string) {
+  return (
+    diff ===
+    "diff --git a/packages/mongolgpt/bin/mongolgpt b/packages/mongolgpt/bin/mongolgpt\nold mode 100644\nnew mode 100755\n"
+  )
+}
+
 const expected = [
   "M\tpackages/console/app/src/component/header.tsx",
   "M\tpackages/console/app/src/routes/download/index.tsx",

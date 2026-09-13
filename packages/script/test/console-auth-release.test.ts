@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { verifyConsoleAuthPatch } from "../src/console-auth-release"
+import { isConsoleInstallModeChange, verifyConsoleAuthPatch } from "../src/console-auth-release"
 
 const files = [
   "M\tpackages/console/app/src/component/header.tsx",
@@ -9,6 +9,20 @@ const files = [
   "M\tpackages/console/app/src/routes/support/index.tsx",
   "A\tpackages/console/app/test/auth-navigation-contract.test.ts",
 ]
+
+test("recognizes only Bun's unchanged workspace launcher executable-bit change", () => {
+  const diff =
+    "diff --git a/packages/mongolgpt/bin/mongolgpt b/packages/mongolgpt/bin/mongolgpt\nold mode 100644\nnew mode 100755\n"
+  expect(isConsoleInstallModeChange(diff)).toBe(true)
+  for (const value of [
+    "",
+    diff + "@@ -1 +1 @@\n-old\n+new\n",
+    diff + diff,
+    diff.replaceAll("bin/mongolgpt", "src/index.ts"),
+    diff.replace("new mode 100755", "new mode 120000"),
+  ])
+    expect(isConsoleInstallModeChange(value)).toBe(false)
+})
 
 test("accepts only the exact website auth patch", () => {
   expect(() => verifyConsoleAuthPatch(files.join("\n") + "\n")).not.toThrow()

@@ -1,9 +1,10 @@
-import { appendFile, mkdir, mkdtemp } from "node:fs/promises"
+import { appendFile, chmod, mkdir, mkdtemp } from "node:fs/promises"
 import { dirname, join } from "node:path"
 import {
   verifyConsoleAuthPatch,
   consoleBaselineCommit,
   consoleFixCommit,
+  isConsoleInstallModeChange,
 } from "../packages/script/src/console-auth-release"
 
 async function git(...args: string[]) {
@@ -18,6 +19,11 @@ if (process.env.GITHUB_ACTIONS !== "true" || !process.env.RUNNER_TEMP || !proces
   throw new Error("Console auth release preparation requires a disposable GitHub Actions checkout")
 if (process.env.GITHUB_REPOSITORY !== "sergei10a-rgb/mongolgpt" || process.env.GITHUB_REF !== "refs/heads/main")
   throw new Error("Unexpected Console release repository or branch")
+// Bun makes workspace bin entries executable. Accept only the exact mode-only diff.
+if (isConsoleInstallModeChange(await git("diff", "HEAD", "--binary", "--no-ext-diff"))) {
+  await chmod("packages/mongolgpt/bin/mongolgpt", 0o644)
+  console.log("Restored the unchanged CLI launcher's checkout mode after dependency installation")
+}
 if ((await git("status", "--porcelain", "--untracked-files=no")).trim()) {
   console.error(JSON.stringify({ modifiedTrackedFiles: (await git("diff", "HEAD", "--name-only")).trim().split("\n") }))
   throw new Error("Refusing to replace a modified checkout")
