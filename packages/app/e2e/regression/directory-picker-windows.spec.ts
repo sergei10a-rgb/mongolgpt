@@ -60,7 +60,8 @@ for (const modern of [true, false]) {
         !modern && recent
           ? page.getByRole("navigation", { name: mn["sidebar.nav.projectsAndSessions"], exact: true })
           : page.getByRole("main")
-      await surface.getByRole("button", { name: mn["command.project.open"], exact: true }).click()
+      const command = modern && recent ? mn["home.project.add"] : mn["command.project.open"]
+      await surface.getByRole("button", { name: command, exact: true }).click()
       const dialog = page.getByRole("dialog", { name: mn["command.project.open"], exact: true })
       await expect(dialog).toBeVisible()
       const search = dialog.getByRole("textbox")
