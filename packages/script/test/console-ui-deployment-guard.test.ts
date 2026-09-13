@@ -224,6 +224,58 @@ describe("Console UI deployment guard", () => {
     }
   })
 
+  test("preserves documented command defaults and only permits typed local Pulumi endpoints", () => {
+    const local = builder()
+    const defaults = {
+      addPreviousOutputInEnv: true,
+      logging: "stdoutAndStderr",
+      interpreter: ["/bin/sh", "-c"],
+      stdin: "",
+      delete: "",
+      assetPaths: [],
+      archivePaths: [],
+    }
+    Object.assign(local.old.inputs, defaults)
+    Object.assign(local.new.inputs, structuredClone(defaults))
+    local.old.inputs.environment = {
+      PULUMI_NODEJS_DRY_RUN: "false",
+      PULUMI_NODEJS_MONITOR: "127.0.0.1:1234",
+      PULUMI_NODEJS_ENGINE: "localhost:1235",
+      PULUMI_NODEJS_SYNC: "/tmp/pulumi-nodejs1234",
+    }
+    local.new.inputs.environment = {
+      PULUMI_NODEJS_DRY_RUN: "true",
+      PULUMI_NODEJS_MONITOR: "127.0.0.1:2345",
+      PULUMI_NODEJS_ENGINE: "localhost:2346",
+      PULUMI_NODEJS_SYNC: "/tmp/pulumi-nodejs2345",
+    }
+    expect(verifyConsoleUiDeploymentDiff([script(), local]).builderUpdates).toBe(1)
+    for (const [key, value] of Object.entries({
+      addPreviousOutputInEnv: false,
+      logging: "none",
+      interpreter: ["other"],
+      stdin: "command",
+      delete: "command",
+      assetPaths: ["**/*"],
+      archivePaths: ["**/*"],
+    })) {
+      const changed = structuredClone(local)
+      changed.new.inputs[key] = value
+      rejects([script(), changed])
+    }
+    for (const [key, value] of Object.entries({
+      PULUMI_NODEJS_DRY_RUN: "arbitrary",
+      PULUMI_NODEJS_MONITOR: "remote.invalid:1234",
+      PULUMI_NODEJS_ENGINE: "0.0.0.0:1234",
+      PULUMI_NODEJS_SYNC: "/tmp/../../secret",
+      PULUMI_CONFIG: "changed",
+    })) {
+      const changed = structuredClone(local)
+      ;(changed.new.inputs.environment as Record<string, unknown>)[key] = value
+      rejects([script(), changed])
+    }
+  })
+
   test.each([
     "bindings",
     "compatibilityDate",

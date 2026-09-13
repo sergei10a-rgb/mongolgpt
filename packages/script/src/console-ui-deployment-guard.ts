@@ -76,6 +76,44 @@ const computed = [
   "startupTimeMs",
 ]
 const optionalComputed = ["annotations", "placement", "tailConsumers"]
+const commandInputs = [
+  "create",
+  "update",
+  "dir",
+  "environment",
+  "triggers",
+  "addPreviousOutputInEnv",
+  "logging",
+  "interpreter",
+  "stdin",
+  "delete",
+  "assetPaths",
+  "archivePaths",
+]
+const commandOptions = ["interpreter", "logging", "stdin", "delete", "assetPaths", "archivePaths"]
+const engineEnvironment = [
+  "PULUMI_NODEJS_DRY_RUN",
+  "PULUMI_NODEJS_MONITOR",
+  "PULUMI_NODEJS_ENGINE",
+  "PULUMI_NODEJS_SYNC",
+  "PULUMI_CONFIG",
+  "PULUMI_CONFIG_SECRET_KEYS",
+  "PULUMI_NODEJS_PROJECT",
+  "PULUMI_NODEJS_STACK",
+  "PULUMI_NODEJS_ROOT_DIRECTORY",
+  "PULUMI_NODEJS_ORGANIZATION",
+  "PULUMI_NODEJS_PARALLEL",
+  "PULUMI_NODEJS_TYPESCRIPT",
+  "PULUMI_NODEJS_TRANSPILE_ONLY",
+  "PULUMI_NODEJS_TSCONFIG_PATH",
+  "SST_SERVER",
+  "SST_BUILD_CONCURRENCY_SITE",
+  "SST_DEBUG",
+  "CI",
+  "ImageVersion",
+  "ImageOS",
+  "INVOCATION_ID",
+]
 type Reason =
   | "invalid-preview"
   | "invalid-entry"
@@ -186,6 +224,12 @@ export function describeConsoleUiDeploymentDiff(value: unknown) {
               ? "redacted"
               : typeof (inputs as Record<string, unknown> | undefined)?.contentFile,
             assets: redacted((inputs as Record<string, unknown> | undefined)?.assets) ? "redacted" : "visible",
+            builderFields:
+              entry.urn === builderUrn && inputs && typeof inputs === "object"
+                ? Object.keys(inputs).map((key) =>
+                    [...commandInputs, ...commandOptions].includes(key) ? key : "other",
+                  )
+                : undefined,
           }
         }),
         validation: diagnosticReason(
@@ -444,7 +488,23 @@ function verify(value: unknown, complete = true) {
       summary.workerUpdates++
     } else if (urn === builderUrn) {
       for (const inputs of [before, after]) {
-        fields(inputs, ["create", "update", "dir", "environment", "triggers"])
+        fields(inputs, commandInputs)
+        if (inputs.addPreviousOutputInEnv !== undefined && typeof inputs.addPreviousOutputInEnv !== "boolean")
+          reject("invalid-state")
+        if (
+          inputs.logging !== undefined &&
+          !["stdout", "stderr", "stdoutAndStderr", "none"].includes(String(inputs.logging))
+        )
+          reject("invalid-state")
+        for (const [key, value] of Object.entries({
+          interpreter: ["/bin/sh", "-c"],
+          stdin: "",
+          delete: "",
+          assetPaths: [],
+          archivePaths: [],
+        })) {
+          if (inputs[key] !== undefined && !isDeepStrictEqual(inputs[key], value)) reject("invalid-state")
+        }
         if (
           inputs.create !== "bun run build" ||
           inputs.update !== "bun run build" ||
@@ -473,6 +533,10 @@ function verify(value: unknown, complete = true) {
             "PREVIEW_AUTH_ONLY",
             "MONGOLGPT_RELEASE_SHA",
             "PULUMI_TF_BRIDGE_ACCURATE_PF_BRIDGE_PREVIEW",
+            "PULUMI_NODEJS_DRY_RUN",
+            "PULUMI_NODEJS_MONITOR",
+            "PULUMI_NODEJS_ENGINE",
+            "PULUMI_NODEJS_SYNC",
           ].includes(key)
         )
           return false
@@ -484,6 +548,14 @@ function verify(value: unknown, complete = true) {
           if (["AUTH_UI_ONLY", "PREVIEW_AUTH_ONLY"].includes(key) && !["true", "false"].includes(value))
             reject("invalid-state")
           if (key === "PULUMI_TF_BRIDGE_ACCURATE_PF_BRIDGE_PREVIEW" && value !== "true") reject("invalid-state")
+          if (key === "PULUMI_NODEJS_DRY_RUN" && !["true", "false"].includes(value)) reject("invalid-state")
+          if (
+            ["PULUMI_NODEJS_MONITOR", "PULUMI_NODEJS_ENGINE"].includes(key) &&
+            !/^(?:127\.0\.0\.1|localhost):[1-9]\d{0,4}$/.test(value)
+          )
+            reject("invalid-state")
+          if (key === "PULUMI_NODEJS_SYNC" && !/^\/tmp\/pulumi-nodejs[A-Za-z0-9_-]+$/.test(value))
+            reject("invalid-state")
         }
         return true
       })
@@ -640,6 +712,7 @@ function environmentChanges(before: Record<string, unknown>, after: Record<strin
       /^(GITHUB_|RUNNER_|ACTIONS_)/.test(key)
         ? "ci-entry"
         : [
+              ...engineEnvironment,
               "AUTH_UI_CONTROL",
               "AUTH_UI_ONLY",
               "PREVIEW_AUTH_ONLY",
