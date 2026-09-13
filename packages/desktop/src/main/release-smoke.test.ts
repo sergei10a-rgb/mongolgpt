@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import { EventEmitter } from "node:events"
-import { readFileSync, rmSync } from "node:fs"
+import { existsSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
@@ -10,6 +10,7 @@ import {
   desktopSmokeScreenshotFile,
   desktopSmokeFile,
   rendererSmokeFailure,
+  rendererPaintProbe,
   waitForRendererAccountGate,
   waitForRendererReady,
   writeDesktopSmokeFailure,
@@ -80,6 +81,7 @@ describe("desktop release smoke", () => {
     await expect(
       captureRendererSmokeScreenshot(
         {
+          executeJavaScript: async () => true,
           capturePage: async () => ({
             isEmpty: () => false,
             getSize: () => ({ width: 1280, height: 800 }),
@@ -97,6 +99,7 @@ describe("desktop release smoke", () => {
     await expect(
       captureRendererSmokeScreenshot(
         {
+          executeJavaScript: async () => true,
           capturePage: async () => ({
             isEmpty: () => true,
             getSize: () => ({ width: 0, height: 0 }),
@@ -106,6 +109,54 @@ describe("desktop release smoke", () => {
         file,
       ),
     ).rejects.toThrow("screenshot")
+  })
+
+  test("waits for fonts, finite animations and composited frames without changing the DOM", () => {
+    expect(rendererPaintProbe).toContain("document.fonts.ready")
+    expect(rendererPaintProbe).toContain("Number.isFinite")
+    expect(rendererPaintProbe).toContain("animation.finished")
+    expect(rendererPaintProbe).toContain("requestAnimationFrame(() => requestAnimationFrame(resolve))")
+    expect(rendererPaintProbe).not.toContain(".style")
+    expect(rendererPaintProbe).not.toContain(".cancel()")
+  })
+
+  test("discards transitional screenshots until two consecutive frames agree", async () => {
+    const file = join(tmpdir(), `mongolgpt-desktop-smoke-${randomUUID()}.json`)
+    files.push(desktopSmokeScreenshotFile(file))
+    let captures = 0
+    const frames = [Buffer.alloc(8, 1), Buffer.alloc(8, 2), Buffer.alloc(8, 3), Buffer.alloc(8, 3)]
+    await captureRendererSmokeScreenshot(
+      {
+        executeJavaScript: async () => true,
+        capturePage: async () => {
+          const frame = frames[captures++]!
+          return { isEmpty: () => false, getSize: () => ({ width: 640, height: 480 }), toPNG: () => frame }
+        },
+      },
+      file,
+      1000,
+      1,
+    )
+    expect(captures).toBe(4)
+    expect(readFileSync(desktopSmokeScreenshotFile(file))).toEqual(frames[3])
+  })
+
+  test("fails boundedly if the renderer never finishes painting", async () => {
+    const file = join(tmpdir(), `mongolgpt-desktop-smoke-${randomUUID()}.json`)
+    await expect(
+      captureRendererSmokeScreenshot(
+        {
+          executeJavaScript: () => new Promise(() => {}),
+          capturePage: async () => {
+            throw new Error("must not capture before paint")
+          },
+        },
+        file,
+        10,
+        1,
+      ),
+    ).rejects.toThrow("тогтворжсонгүй")
+    expect(existsSync(desktopSmokeScreenshotFile(file))).toBe(false)
   })
 
   test("waits for the packaged renderer main frame", async () => {

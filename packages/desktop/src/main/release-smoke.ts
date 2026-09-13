@@ -8,6 +8,7 @@ type RendererContents = Pick<EventEmitter, "off" | "once"> & {
 }
 
 type RendererScreenshotContents = {
+  executeJavaScript(code: string, userGesture?: boolean): Promise<unknown>
   capturePage(): Promise<{
     isEmpty(): boolean
     getSize(): { width: number; height: number }
@@ -121,6 +122,16 @@ export function desktopSmokeScreenshotFile(file: string) {
   return `${file}.png`
 }
 
+export const rendererPaintProbe = `(async () => {
+  await document.fonts.ready
+  const animations = document.getAnimations().filter((animation) =>
+    Number.isFinite(animation.effect?.getComputedTiming().endTime)
+  )
+  await Promise.all(animations.map((animation) => animation.finished.catch(() => undefined)))
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  return document.visibilityState === 'visible'
+})()`
+
 function loadedRendererURL(value: string) {
   try {
     const url = new URL(value)
@@ -198,15 +209,37 @@ export async function waitForRendererAccountGate(webContents: RendererContents, 
 export async function captureRendererSmokeScreenshot(
   webContents: RendererScreenshotContents,
   file: string,
+  timeoutMs = 15_000,
+  intervalMs = 200,
 ): Promise<DesktopSmokeScreenshot> {
-  const image = await webContents.capturePage()
-  const size = image.getSize()
-  const png = image.toPNG()
-  if (image.isEmpty() || size.width < 1 || size.height < 1 || png.length < 8) {
-    throw new Error("Desktop smoke screenshot хоосон эсвэл буруу хэмжээтэй байна.")
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  const expired = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error("Desktop smoke screenshot тогтворжсонгүй.")), timeoutMs)
+  })
+  const deadline = Date.now() + timeoutMs
+  let previous: { png: Buffer; width: number; height: number } | undefined
+  try {
+    while (Date.now() < deadline) {
+      const painted = await Promise.race([webContents.executeJavaScript(rendererPaintProbe), expired])
+      if (painted !== true) throw new Error("Desktop smoke screenshot: renderer харагдахгүй байна.")
+      const image = await Promise.race([webContents.capturePage(), expired])
+      const size = image.getSize()
+      const png = image.toPNG()
+      if (image.isEmpty() || size.width < 1 || size.height < 1 || png.length < 8) {
+        throw new Error("Desktop smoke screenshot хоосон эсвэл буруу хэмжээтэй байна.")
+      }
+      // A semantic DOM check can precede the composited frame on native macOS.
+      if (previous?.width === size.width && previous.height === size.height && previous.png.equals(png)) {
+        writeFileSync(desktopSmokeScreenshotFile(file), png)
+        return { width: size.width, height: size.height, bytes: png.length }
+      }
+      previous = { png, ...size }
+      await Promise.race([new Promise((resolve) => setTimeout(resolve, intervalMs)), expired])
+    }
+    throw new Error("Desktop smoke screenshot тогтворжсонгүй.")
+  } finally {
+    clearTimeout(timeout)
   }
-  writeFileSync(desktopSmokeScreenshotFile(file), png)
-  return { width: size.width, height: size.height, bytes: png.length }
 }
 
 export function writeDesktopSmokeResult(
