@@ -143,6 +143,9 @@ export function describeConsoleUiDeploymentDiff(value: unknown) {
     "__provider",
     "enabled",
     "previewEnabled",
+    "assets.assetManifestSha256",
+    "assets.directory",
+    "assets.jwt",
   ]
   return {
     entries: value.slice(0, 100).map((raw) => {
@@ -172,17 +175,26 @@ export function describeConsoleUiDeploymentDiff(value: unknown) {
             unknownFields: Object.keys(state).filter((key) => !stateFields.includes(key)).length,
             deleted: state.delete === true,
             inputs: !inputs || typeof inputs !== "object" ? typeof inputs : Array.isArray(inputs) ? "array" : "object",
-            codeHash:
-              typeof (inputs as Record<string, unknown> | undefined)?.contentSha256 === "string"
+            codeHash: redacted((inputs as Record<string, unknown> | undefined)?.contentSha256)
+              ? "redacted"
+              : typeof (inputs as Record<string, unknown> | undefined)?.contentSha256 === "string"
                 ? hash.test((inputs as Record<string, string>).contentSha256)
                   ? "hash"
                   : "not-hash"
                 : "missing",
+            codeFile: redacted((inputs as Record<string, unknown> | undefined)?.contentFile)
+              ? "redacted"
+              : typeof (inputs as Record<string, unknown> | undefined)?.contentFile,
+            assets: redacted((inputs as Record<string, unknown> | undefined)?.assets) ? "redacted" : "visible",
           }
         }),
         validation: diagnosticReason(
           value.filter((item) => item && typeof item === "object" && item.urn === entry.urn),
         ),
+        environmentChanges:
+          entry.urn === builderUrn && before && after && typeof before === "object" && typeof after === "object"
+            ? environmentChanges(before as Record<string, unknown>, after as Record<string, unknown>)
+            : undefined,
         replacementKeys: Array.isArray(entry.keys)
           ? entry.keys.map((key) => (key === "triggers" || key === "triggers[0]" ? key : "other"))
           : [],
@@ -247,7 +259,15 @@ function builderReplacements(value: unknown[]) {
   metadata(remove, [])
   // Only the existing, delete-command-free local builder has a three-step lifecycle.
   // The retained replace event still passes all environment, command and trigger checks.
-  return entries.filter((entry) => entry !== create && entry !== remove)
+  const next = object(replace.new)
+  if (next.delete !== undefined && next.delete !== false) reject("invalid-state")
+  return entries
+    .filter((entry) => entry !== create && entry !== remove)
+    .map((entry) =>
+      entry === replace
+        ? { ...entry, old: next.delete === undefined ? omit(old, ["delete"]) : { ...old, delete: next.delete } }
+        : entry,
+    )
 }
 
 function verify(value: unknown, complete = true) {
@@ -328,13 +348,13 @@ function verify(value: unknown, complete = true) {
         )
           reject("invalid-state")
         if (
-          typeof inputs.contentFile !== "string" ||
-          !inputs.contentFile.trim() ||
-          typeof inputs.contentSha256 !== "string" ||
-          !hash.test(inputs.contentSha256)
+          (!redacted(inputs.contentFile) && (typeof inputs.contentFile !== "string" || !inputs.contentFile.trim())) ||
+          (!redacted(inputs.contentSha256) &&
+            (typeof inputs.contentSha256 !== "string" || !hash.test(inputs.contentSha256)))
         )
           reject("invalid-code")
-        if (opaque(inputs.contentFile)) reject("invalid-code")
+        if (opaque(inputs.contentFile) && !redacted(inputs.contentFile)) reject("invalid-code")
+        if (redacted(inputs.assets)) continue
         const assets = object(inputs.assets)
         fields(assets, ["directory", "assetManifestSha256", "config", "jwt"])
         if (typeof assets.directory !== "string" || !assets.directory.trim() || opaque(assets.directory))
@@ -361,6 +381,31 @@ function verify(value: unknown, complete = true) {
       if (!isDeepStrictEqual(before.bindings, after.bindings)) reject("changed-protected-value")
       const codeFields = ["contentFile", "contentSha256", "assets", "assets.directory", "assets.assetManifestSha256"]
       const detailed = entry.detailedDiff === undefined || entry.detailedDiff === null ? {} : object(entry.detailedDiff)
+      const maskedCode = [before.contentFile, after.contentFile, before.contentSha256, after.contentSha256].some(
+        redacted,
+      )
+      const hashDiff = detailed.contentSha256
+      const provedCodeChange =
+        Array.isArray(entry.diffs) &&
+        entry.diffs.includes("contentSha256") &&
+        hashDiff !== null &&
+        typeof hashDiff === "object" &&
+        !Array.isArray(hashDiff) &&
+        object(hashDiff).diffKind === "update" &&
+        object(hashDiff).inputDiff === false
+      if (maskedCode && !provedCodeChange) reject("invalid-code")
+      const maskedAssets = redacted(before.assets) || redacted(after.assets)
+      if (
+        maskedAssets &&
+        (!redacted(before.assets) ||
+          !redacted(after.assets) ||
+          !isDeepStrictEqual(before.assets, after.assets) ||
+          !provedCodeChange ||
+          !Array.isArray(entry.diffs) ||
+          (entry.diffs.includes("assets") && !Object.hasOwn(detailed, "assets.assetManifestSha256")) ||
+          Object.hasOwn(detailed, "assets"))
+      )
+        reject("opaque-protected-value")
       // Same independently reported provider proof as usage-queue-deployment-guard.
       // Optional+Computed additions qualify only when unconfigured in BOTH inputs.
       const additions = optionalComputed.filter((key) => {
@@ -383,16 +428,18 @@ function verify(value: unknown, complete = true) {
           !knownRedactions(after.bindings) ||
           !Array.isArray(entry.diffs) ||
           !entry.diffs.includes("contentSha256") ||
-          before.contentSha256 === after.contentSha256 ||
+          (!maskedCode && before.contentSha256 === after.contentSha256) ||
           entry.diffs.some((key) => !codeFields.includes(key) && !computed.includes(key) && !additions.includes(key))
         )
           reject("opaque-protected-value")
       }
-      equal(
-        omit(object(before.assets), ["directory", "assetManifestSha256"]),
-        omit(object(after.assets), ["directory", "assetManifestSha256"]),
-      )
-      if (isDeepStrictEqual(before, after)) reject("invalid-code")
+      if (!maskedAssets) {
+        equal(
+          omit(object(before.assets), ["directory", "assetManifestSha256"]),
+          omit(object(after.assets), ["directory", "assetManifestSha256"]),
+        )
+      }
+      if (isDeepStrictEqual(before, after) && !(maskedCode && provedCodeChange)) reject("invalid-code")
       metadata(entry, codeFields, [...computed, ...additions])
       summary.workerUpdates++
     } else if (urn === builderUrn) {
@@ -450,8 +497,8 @@ function verify(value: unknown, complete = true) {
           !knownRedactions(oldProtected) ||
           !knownRedactions(newProtected) ||
           !Array.isArray(entry.diffs) ||
-          !entry.diffs.includes("triggers") ||
-          entry.diffs.some((key) => key !== "triggers" && key !== "environment")
+          !entry.diffs.some((key) => key === "triggers" || key === "triggers[0]") ||
+          entry.diffs.some((key) => !["triggers", "triggers[0]", "environment", ...environmentPaths].includes(key))
         )
           reject("opaque-protected-value")
         if (
@@ -510,11 +557,10 @@ function verify(value: unknown, complete = true) {
 function metadata(entry: Record<string, unknown>, allowed: string[], outputOnly: string[] = [], replacement = false) {
   if (
     entry.keys !== undefined &&
-    (!Array.isArray(entry.keys) || entry.keys.some((key) => !replacement || key !== "triggers"))
+    (!Array.isArray(entry.keys) || entry.keys.some((key) => !replacement || !["triggers", "triggers[0]"].includes(key)))
   )
     reject("invalid-diff-metadata")
-  if (replacement && (!Array.isArray(entry.keys) || entry.keys.length !== 1 || entry.keys[0] !== "triggers"))
-    reject("invalid-diff-metadata")
+  if (replacement && (!Array.isArray(entry.keys) || entry.keys.length !== 1)) reject("invalid-diff-metadata")
   if (
     entry.diffs !== undefined &&
     (!Array.isArray(entry.diffs) ||
@@ -571,6 +617,45 @@ function knownRedactions(value: unknown): boolean {
   }
   if (["__pulumiUnknown", "ciphertext", "secure"].some((key) => Object.hasOwn(item, key))) return false
   return Object.values(item).every(knownRedactions)
+}
+
+function redacted(value: unknown) {
+  return (
+    value === "[secret]" ||
+    (value !== null &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      Object.hasOwn(value, "4dabf18193072939515e22adb298388d") &&
+      knownRedactions(value))
+  )
+}
+
+function environmentChanges(before: Record<string, unknown>, after: Record<string, unknown>) {
+  const old = before.environment
+  const next = after.environment
+  if (!old || !next || typeof old !== "object" || typeof next !== "object") return []
+  return [...new Set([...Object.keys(old), ...Object.keys(next)])]
+    .filter((key) => !isDeepStrictEqual((old as Record<string, unknown>)[key], (next as Record<string, unknown>)[key]))
+    .map((key) =>
+      /^(GITHUB_|RUNNER_|ACTIONS_)/.test(key)
+        ? "ci-entry"
+        : [
+              "AUTH_UI_CONTROL",
+              "AUTH_UI_ONLY",
+              "PREVIEW_AUTH_ONLY",
+              "MONGOLGPT_RELEASE_SHA",
+              "PULUMI_TF_BRIDGE_ACCURATE_PF_BRIDGE_PREVIEW",
+              "PATH",
+              "HOME",
+              "PWD",
+              "SHLVL",
+              "SHELL",
+              "TMPDIR",
+              "NODE_OPTIONS",
+            ].includes(key)
+          ? key
+          : "other",
+    )
 }
 
 function object(value: unknown): Record<string, unknown> {

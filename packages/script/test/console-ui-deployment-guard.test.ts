@@ -155,6 +155,75 @@ describe("Console UI deployment guard", () => {
     rejects(cloud)
   })
 
+  test("accepts SST output-event deletion markers and indexed replacement paths", () => {
+    const local = {
+      ...builder(),
+      op: "replace",
+      keys: ["triggers[0]"],
+      diffs: ["environment.GITHUB_RUN_ID", "triggers[0]"],
+      detailedDiff: {
+        "environment.GITHUB_RUN_ID": { diffKind: "update", inputDiff: false },
+        "triggers[0]": { diffKind: "update-replace", inputDiff: false },
+      },
+    }
+    local.old.inputs.environment = { GITHUB_RUN_ID: "1", SST_RESOURCE_Secret: "[secret]" }
+    local.new.inputs.environment = { GITHUB_RUN_ID: "2", SST_RESOURCE_Secret: "[secret]" }
+    const before = { ...local.old, delete: true }
+    const phases = [
+      { ...local, old: before, op: "create-replacement", logical: false },
+      { ...local, old: before, logical: true },
+      { urn: local.urn, type: local.type, provider: local.provider, op: "delete-replaced", old: before, new: null },
+    ]
+    expect(verifyConsoleUiDeploymentDiff([script(), ...phases]).builderUpdates).toBe(1)
+    rejects([script(), phases[1]])
+    rejects([
+      script(),
+      ...phases.map((phase) => (phase.new ? { ...phase, new: { ...phase.new, delete: true } } : phase)),
+    ])
+    rejects([script(), ...phases.map((phase) => (phase.new ? { ...phase, keys: ["environment"] } : phase))])
+    rejects([
+      script(),
+      ...phases.map((phase) => (phase.new ? { ...phase, diffs: ["environment.SECRET", "triggers[0]"] } : phase)),
+    ])
+  })
+
+  test("validates secret-derived build hashes and assets against granular provider proof", () => {
+    const mask = { "4dabf18193072939515e22adb298388d": "1b47061264138c4ac30d75fd1eb44270", ciphertext: "[secret]" }
+    const entry = script()
+    for (const state of [entry.old, entry.new]) {
+      state.inputs.contentFile = structuredClone(mask)
+      state.inputs.contentSha256 = structuredClone(mask)
+      state.inputs.assets = structuredClone(mask)
+      state.inputs.bindings = structuredClone(mask)
+    }
+    const proof = {
+      ...entry,
+      diffs: ["contentSha256", "assets"],
+      detailedDiff: {
+        contentSha256: { diffKind: "update", inputDiff: false },
+        "assets.assetManifestSha256": { diffKind: "update", inputDiff: false },
+      },
+    }
+    expect(verifyConsoleUiDeploymentDiff([proof]).workerUpdates).toBe(1)
+    rejects([{ ...proof, detailedDiff: undefined }])
+    rejects([
+      { ...proof, detailedDiff: { ...proof.detailedDiff, contentSha256: { diffKind: "update", inputDiff: true } } },
+    ])
+    rejects([{ ...proof, diffs: [] }])
+    rejects([{ ...proof, detailedDiff: { contentSha256: proof.detailedDiff.contentSha256 } }])
+    rejects([{ ...proof, detailedDiff: { ...proof.detailedDiff, assets: { diffKind: "update", inputDiff: false } } }])
+    for (const path of ["assets.config.redirects", "bindings", "assets.jwt", "compatibilityFlags"]) {
+      rejects([{ ...proof, detailedDiff: { ...proof.detailedDiff, [path]: { diffKind: "update", inputDiff: false } } }])
+    }
+    for (const field of ["contentFile", "contentSha256", "assets", "bindings"]) {
+      for (const value of [unknown, { secure: "[secret]" }, { ...mask, extra: true }, undefined]) {
+        const changed = structuredClone(proof)
+        changed.new.inputs[field] = value
+        rejects([changed])
+      }
+    }
+  })
+
   test.each([
     "bindings",
     "compatibilityDate",
