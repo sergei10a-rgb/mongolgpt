@@ -3,6 +3,18 @@ import { isAbsolute } from "node:path"
 import { fileURLToPath } from "node:url"
 import candidate from "../wrangler.candidate.dev.json" with { type: "json" }
 
+type CandidateService = { fetch(input: string, init: RequestInit): Promise<Response> }
+
+export function candidateServiceRequest(service: CandidateService, request: Request) {
+  // Miniflare uses its own Request class and cannot accept Node's native Request instance.
+  return service.fetch(request.url, {
+    method: request.method,
+    headers: Object.fromEntries(request.headers),
+    redirect: request.redirect,
+    signal: request.signal,
+  })
+}
+
 export async function probeCandidateService(request: (input: Request) => Promise<Response>) {
   const checks: { name: string; path: string; status: number; headers: Record<string, string> }[] = [
     { name: "health", path: "/global/health", status: 200, headers: {} },
@@ -71,13 +83,15 @@ async function main() {
   try {
     const { getPlatformProxy } = await import("wrangler")
     phase = "proxy_setup"
-    const platform = await getPlatformProxy<{ CANDIDATE: { fetch(input: Request): Promise<Response> } }>({
+    const platform = await getPlatformProxy<{ CANDIDATE: CandidateService }>({
       configPath,
       persist: false,
       remoteBindings: true,
     })
     phase = "http_contract"
-    const result = await probeCandidateService((request) => platform.env.CANDIDATE.fetch(request)).finally(async () => {
+    const result = await probeCandidateService((request) =>
+      candidateServiceRequest(platform.env.CANDIDATE, request),
+    ).finally(async () => {
       try {
         await platform.dispose()
       } catch (error) {
