@@ -142,4 +142,8 @@ jobs:
           path: .artifacts
 
       - name: Attach packages without publishing the draft
-        run: gh release upload "$RELEASE_TAG" .artifacts/*/*.dmg .artifacts/*/*.zip --repo "$GITHUB_REPOSITORY"
+        run: |
+          shopt -s nullglob
+          assets=(.artifacts/*.dmg .artifacts/*.zip .artifacts/*/*.dmg .artifacts/*/*.zip)
+          test "${#assets[@]}" -gt 0
+          gh release upload "$RELEASE_TAG" "${assets[@]}" --repo "$GITHUB_REPOSITORY"
