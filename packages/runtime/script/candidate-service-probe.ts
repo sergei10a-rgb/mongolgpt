@@ -1,10 +1,19 @@
 import { writeFile } from "node:fs/promises"
 import { isAbsolute } from "node:path"
 import { fileURLToPath } from "node:url"
-import type { Unstable_DevWorker } from "wrangler"
+import type { Unstable_DevOptions, Unstable_DevWorker } from "wrangler"
 import candidate from "../wrangler.candidate.dev.json" with { type: "json" }
 
 type ProbeResponse = Response | Awaited<ReturnType<Unstable_DevWorker["fetch"]>>
+
+// Omit `local`: unstable_dev runs locally by default, but explicit true disables remote bindings.
+export const candidateProbeLocalOptions = {
+  ip: "127.0.0.1",
+  port: 0,
+  persist: false,
+  logLevel: "none",
+  experimental: { disableExperimentalWarning: true, disableDevRegistry: true, watch: false, enableContainers: false },
+} satisfies Unstable_DevOptions
 
 export type ProbeProgress = { check: string; status?: number; json?: boolean; health?: boolean }
 
@@ -89,17 +98,7 @@ async function main() {
     // Run the probe in a local Worker so app Origin headers never enter Miniflare's protected /cdn-cgi RPC endpoint.
     const platform = await unstable_dev(fileURLToPath(new URL("./candidate-probe-bridge.ts", import.meta.url)), {
       config: configPath,
-      local: true,
-      ip: "127.0.0.1",
-      port: 0,
-      persist: false,
-      logLevel: "none",
-      experimental: {
-        disableExperimentalWarning: true,
-        disableDevRegistry: true,
-        watch: false,
-        enableContainers: false,
-      },
+      ...candidateProbeLocalOptions,
     })
     phase = "http_contract"
     const result = await probeCandidateService(

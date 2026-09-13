@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { probeCandidateService, probeErrorCode } from "../script/candidate-service-probe"
+import { candidateProbeLocalOptions, probeCandidateService, probeErrorCode } from "../script/candidate-service-probe"
 import { candidateProbeConfig, candidateProbeContext, candidateProbeFailure } from "../script/probe-dev-runtime"
 import candidate from "../wrangler.candidate.dev.json"
 import { createRuntimeHandler } from "../src/runtime"
@@ -27,6 +27,14 @@ function handler() {
 }
 
 describe("private candidate probe", () => {
+  test("local Worker stays on loopback without disabling its remote service binding", () => {
+    expect(candidateProbeLocalOptions.ip).toBe("127.0.0.1")
+    expect(candidateProbeLocalOptions.port).toBe(0)
+    expect(candidateProbeLocalOptions.persist).toBe(false)
+    expect(candidateProbeLocalOptions).not.toHaveProperty("local")
+    expect(candidateProbeLocalOptions.experimental).not.toHaveProperty("forceLocal")
+    expect(candidateProbeLocalOptions.experimental.enableContainers).toBe(false)
+  })
   test("local bridge only forwards fixed read-only probe paths and synthetic auth", async () => {
     const runtime = handler()
     const env = { CANDIDATE: { fetch: (url: string, init: RequestInit) => runtime(new Request(url, init)) } }
