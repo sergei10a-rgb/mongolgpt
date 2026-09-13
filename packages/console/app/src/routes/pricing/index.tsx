@@ -222,7 +222,7 @@ export default function Pricing() {
                       </span>
                     }
                   >
-                    <A href={language.route(pricingAuthRoute(plan.id))} data-slot="plan-action">
+                    <A href={language.route(pricingAuthRoute(plan.id))} rel="external" data-slot="plan-action">
                       {plan.id !== "free" && pricing()?.environment === "sandbox"
                         ? i18n.t("pricing.cta.sandbox")
                         : plan.action}
@@ -239,7 +239,9 @@ export default function Pricing() {
                 <article data-component="pricing-route">
                   <h2>{row.title}</h2>
                   <p>{row.body}</p>
-                  <A href={language.route(row.href)}>{row.action}</A>
+                  <A href={language.route(row.href)} rel={row.href === "/auth" ? "external" : undefined}>
+                    {row.action}
+                  </A>
                 </article>
               )}
             </For>

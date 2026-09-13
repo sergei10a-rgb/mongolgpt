@@ -161,11 +161,13 @@ export function Header(props: { hideGetStarted?: boolean }) {
             </a>
           </li>
           <li>
-            <A href={language.route("/auth")}>{i18n.t("nav.login")}</A>
+            <A href={language.route("/auth")} rel="external">
+              {i18n.t("nav.login")}
+            </A>
           </li>
           <Show when={!props.hideGetStarted}>
             <li>
-              <A href={language.route("/auth")} data-slot="cta-button">
+              <A href={language.route("/auth")} rel="external" data-slot="cta-button">
                 Бүртгүүлэх
               </A>
             </li>
@@ -241,11 +243,13 @@ export function Header(props: { hideGetStarted?: boolean }) {
                   <A href={language.route("/support")}>{i18n.t("footer.support")}</A>
                 </li>
                 <li>
-                  <A href={language.route("/auth")}>{i18n.t("nav.login")}</A>
+                  <A href={language.route("/auth")} rel="external">
+                    {i18n.t("nav.login")}
+                  </A>
                 </li>
                 <Show when={!props.hideGetStarted}>
                   <li>
-                    <A href={language.route("/auth")} data-slot="cta-button">
+                    <A href={language.route("/auth")} rel="external" data-slot="cta-button">
                       Бүртгүүлэх
                     </A>
                   </li>

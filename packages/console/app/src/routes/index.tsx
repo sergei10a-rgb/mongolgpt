@@ -200,7 +200,7 @@ export default function Home() {
                   холбоно.
                 </p>
                 <div data-slot="hero-actions">
-                  <A href={language.route("/auth")} data-variant="primary">
+                  <A href={language.route("/auth")} rel="external" data-variant="primary">
                     Туршиж үзэх
                   </A>
                   <A href={language.route("/pricing")} data-variant="secondary">
@@ -255,7 +255,9 @@ export default function Home() {
             </div>
 
             <div data-component="hero-nav" aria-label="Үндсэн хэсгүүд">
-              <A href={language.route("/auth")}>Бүртгэл</A>
+              <A href={language.route("/auth")} rel="external">
+                Бүртгэл
+              </A>
               <A href={language.route("/download")}>Ширээний програм</A>
               <A href={language.route("/docs/cli")}>Командын мөр</A>
               <A href={language.route("/docs/providers/")}>Үйлчилгээ үзүүлэгчид</A>
@@ -277,7 +279,9 @@ export default function Home() {
                             {link.label}
                           </a>
                         ) : (
-                          <A href={language.route(link.href)}>{link.label}</A>
+                          <A href={language.route(link.href)} rel={link.href === "/auth" ? "external" : undefined}>
+                            {link.label}
+                          </A>
                         )
                       }
                     </For>
@@ -327,7 +331,9 @@ export default function Home() {
                       <h3>{row.title}</h3>
                     </div>
                     <p>{row.body}</p>
-                    <A href={language.route(row.href)}>{row.action}</A>
+                    <A href={language.route(row.href)} rel={row.href === "/auth" ? "external" : undefined}>
+                      {row.action}
+                    </A>
                   </article>
                 )}
               </For>
@@ -389,7 +395,9 @@ export default function Home() {
                   <article data-component="launch-card">
                     <h3>{action.title}</h3>
                     <p>{action.body}</p>
-                    <A href={language.route(action.href)}>{action.title}</A>
+                    <A href={language.route(action.href)} rel={action.href === "/auth" ? "external" : undefined}>
+                      {action.title}
+                    </A>
                   </article>
                 )}
               </For>

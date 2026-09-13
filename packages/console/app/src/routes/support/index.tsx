@@ -154,7 +154,7 @@ export default function SupportIndex() {
                 Өөрийн хүсэлт, хариу болон төлөвийг аюулгүй харахын тулд MongolGPT бүртгэлээрээ нэвтрэх эсвэл шинэ
                 бүртгэл үүсгэнэ үү.
               </p>
-              <A href={language.route("/auth")} data-slot="primary-action">
+              <A href={language.route("/auth")} rel="external" data-slot="primary-action">
                 Нэвтэрч эсвэл бүртгүүлээд хүсэлт илгээх
               </A>
               <Show when={listError()}>

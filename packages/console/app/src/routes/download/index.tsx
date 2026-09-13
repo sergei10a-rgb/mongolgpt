@@ -148,7 +148,9 @@ export default function Download() {
                 <article data-component="setup-item">
                   <h2>{item.title}</h2>
                   <p>{item.body}</p>
-                  <A href={language.route(item.href)}>{item.action}</A>
+                  <A href={language.route(item.href)} rel={item.href === "/auth" ? "external" : undefined}>
+                    {item.action}
+                  </A>
                 </article>
               )}
             </For>
