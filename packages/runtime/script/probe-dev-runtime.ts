@@ -122,7 +122,7 @@ async function probe() {
   }
 }
 
-async function verify() {
+export async function verify() {
   const result = verifyCandidateDeployment(
     await candidateMetadata(process.env.CLOUDFLARE_API_TOKEN!, "settings"),
     await candidateMetadata(process.env.CLOUDFLARE_API_TOKEN!, "subdomain"),

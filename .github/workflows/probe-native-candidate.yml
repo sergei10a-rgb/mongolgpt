@@ -1,0 +1,57 @@
+name: Verify private dev candidate native session
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "VERIFY DEV CANDIDATE SESSION (one synthetic session, no model calls or promotion)"
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  probe:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: dev
+    steps:
+      - name: Validate synthetic session confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = "VERIFY DEV CANDIDATE SESSION"
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+      - name: Verify synthetic probe boundaries
+        run: |
+          bun run --cwd packages/runtime typecheck
+          bun --cwd packages/runtime test test/candidate-native.test.ts test/candidate-probe.test.ts test/candidate-staging.test.ts
+      - name: Verify only the private candidate native session
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
+          MONGOLGPT_CANDIDATE_CONFIRMATION: ${{ inputs.confirmation }}
+        run: bun packages/runtime/script/probe-native-candidate.ts
+      - name: Upload only the synthetic session receipt
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dev-candidate-native-${{ github.run_attempt }}
+          retention-days: 30
+          if-no-files-found: error
+          path: ${{ runner.temp }}/runtime-candidate-native.json
