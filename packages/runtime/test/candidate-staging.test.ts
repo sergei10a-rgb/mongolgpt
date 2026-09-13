@@ -22,6 +22,7 @@ const env = {
   RUNNER_OS: "Linux",
   RUNNER_TEMP: resolve(tmpdir()),
   MONGOLGPT_CANDIDATE_CONFIRMATION: "STAGE DEV RUNTIME CANDIDATE",
+  MONGOLGPT_CANDIDATE_UPDATE_EXISTING: "false",
   CLOUDFLARE_ACCOUNT_ID: candidate.account_id,
   CLOUDFLARE_API_TOKEN: "candidate-unit-test-token-not-real",
 }
@@ -37,6 +38,20 @@ test("staging is restricted to explicit owner main Linux dev context", () => {
     accountID: candidate.account_id,
     sourceCommit: env.GITHUB_SHA,
     output: join(env.RUNNER_TEMP, "runtime-candidate-receipt.json"),
+    updateExisting: false,
+  })
+  expect(
+    candidateStagingContext({
+      ...env,
+      MONGOLGPT_CANDIDATE_CONFIRMATION: "UPDATE DEV RUNTIME CANDIDATE",
+      MONGOLGPT_CANDIDATE_UPDATE_EXISTING: "true",
+    }),
+  ).toEqual({
+    worker: candidate.name,
+    accountID: candidate.account_id,
+    sourceCommit: env.GITHUB_SHA,
+    output: join(env.RUNNER_TEMP, "runtime-candidate-receipt.json"),
+    updateExisting: true,
   })
   for (const key of Object.keys(env)) expect(() => candidateStagingContext({ ...env, [key]: "" })).toThrow()
   for (const change of [
@@ -45,6 +60,15 @@ test("staging is restricted to explicit owner main Linux dev context", () => {
     { RUNNER_OS: "Windows" },
     { CLOUDFLARE_ACCOUNT_ID: "f".repeat(32) },
     { MONGOLGPT_CANDIDATE_CONFIRMATION: "DEPLOY DEV RUNTIME runtime.dev.mgpt.mn" },
+    {
+      MONGOLGPT_CANDIDATE_CONFIRMATION: "STAGE DEV RUNTIME CANDIDATE",
+      MONGOLGPT_CANDIDATE_UPDATE_EXISTING: "true",
+    },
+    {
+      MONGOLGPT_CANDIDATE_CONFIRMATION: "UPDATE DEV RUNTIME CANDIDATE",
+      MONGOLGPT_CANDIDATE_UPDATE_EXISTING: "false",
+    },
+    { MONGOLGPT_CANDIDATE_UPDATE_EXISTING: "yes" },
     { RUNNER_TEMP: "relative" },
     { GITHUB_SHA: "not-a-commit" },
   ])
@@ -232,6 +256,8 @@ test.skipIf(process.platform !== "linux")(
 
 test("deployment receipt requires exact isolated storage, controls and disabled ingress", () => {
   expect(verifyCandidateDeployment(settings(), ingress())).toEqual({ namespaceID: "a".repeat(32) })
+  expect(verifyCandidateDeployment(settings(), ingress(), "a".repeat(32))).toEqual({ namespaceID: "a".repeat(32) })
+  expect(() => verifyCandidateDeployment(settings(), ingress(), "b".repeat(32))).toThrow()
   const original = settings().value.result.bindings
   for (let index = 0; index < original.length; index++) {
     const missing = settings()
@@ -275,10 +301,14 @@ test("deployment receipt requires exact isolated storage, controls and disabled 
   }
 })
 
-test("workflow exposes only a manual dev staging action and only uploads its receipt", async () => {
+test("workflow exposes only a manual dev staging/update action and only uploads its receipt", async () => {
   const source = await Bun.file(new URL("../../../.github/workflows/stage-dev-runtime.yml", import.meta.url)).text()
   const workflow = Bun.YAML.parse(source) as {
-    on: Record<string, unknown>
+    on: {
+      workflow_dispatch: {
+        inputs: Record<string, { default?: unknown; description: string; required: boolean; type: string }>
+      }
+    }
     concurrency: { group: string; "cancel-in-progress": boolean }
     permissions: Record<string, string>
     jobs: {
@@ -298,6 +328,12 @@ test("workflow exposes only a manual dev staging action and only uploads its rec
     }
   }
   expect(Object.keys(workflow.on)).toEqual(["workflow_dispatch"])
+  expect(workflow.on.workflow_dispatch.inputs.update_existing).toEqual({
+    description: "Existing private mongolgpt-runtime-candidate-dev-г шинэчилнэ. Үндсэн утга false.",
+    required: true,
+    default: false,
+    type: "boolean",
+  })
   expect(workflow.concurrency).toEqual({ group: "cloudflare-deploy-dev", "cancel-in-progress": false })
   expect(workflow.permissions).toEqual({ contents: "read" })
   const job = workflow.jobs.stage
@@ -305,6 +341,9 @@ test("workflow exposes only a manual dev staging action and only uploads its rec
   expect(job.if).toBe("github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'")
   expect(job["timeout-minutes"]).toBe(45)
   expect(job.steps.find((step) => step.name === "Setup Node")?.with?.["node-version"]).toBe("24")
+  expect(job.steps.find((step) => step.name === "Validate candidate staging confirmation")?.run).toContain(
+    "UPDATE DEV RUNTIME CANDIDATE",
+  )
   const deploy = job.steps.find((step) => step.name === "Stage only the private runtime candidate")!
   expect(deploy.run).toBe("bun packages/runtime/script/stage-dev-runtime.ts")
   expect(Object.keys(deploy.env!).sort()).toEqual(
@@ -312,6 +351,7 @@ test("workflow exposes only a manual dev staging action and only uploads its rec
       "CLOUDFLARE_ACCOUNT_ID",
       "CLOUDFLARE_API_TOKEN",
       "MONGOLGPT_CANDIDATE_CONFIRMATION",
+      "MONGOLGPT_CANDIDATE_UPDATE_EXISTING",
       ...candidate.secrets.required,
     ].sort(),
   )

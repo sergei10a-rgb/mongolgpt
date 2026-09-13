@@ -4,9 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: "STAGE DEV RUNTIME CANDIDATE гэж яг бичнэ. Домэйн шилжүүлэхгүй."
+        description: "Create: STAGE DEV RUNTIME CANDIDATE. Update: UPDATE DEV RUNTIME CANDIDATE. Домэйн шилжүүлэхгүй."
         required: true
         type: string
+      update_existing:
+        description: "Existing private mongolgpt-runtime-candidate-dev-г шинэчилнэ. Үндсэн утга false."
+        required: true
+        default: false
+        type: boolean
 
 concurrency:
   group: cloudflare-deploy-dev
@@ -28,7 +33,13 @@ jobs:
       - name: Validate candidate staging confirmation
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
-        run: test "$CONFIRMATION" = "STAGE DEV RUNTIME CANDIDATE"
+          UPDATE_EXISTING: ${{ inputs.update_existing }}
+        run: |
+          if [ "$UPDATE_EXISTING" = "true" ]; then
+            test "$CONFIRMATION" = "UPDATE DEV RUNTIME CANDIDATE"
+          else
+            test "$CONFIRMATION" = "STAGE DEV RUNTIME CANDIDATE"
+          fi
 
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -62,6 +73,7 @@ jobs:
           MONGOLGPT_RUNTIME_AUTH_SECRET: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
           MONGOLGPT_RUNTIME_BACKUP_KEYS: ${{ secrets.MONGOLGPT_RUNTIME_BACKUP_KEYS }}
           MONGOLGPT_CANDIDATE_CONFIRMATION: ${{ inputs.confirmation }}
+          MONGOLGPT_CANDIDATE_UPDATE_EXISTING: ${{ inputs.update_existing }}
         run: bun packages/runtime/script/stage-dev-runtime.ts
 
       - name: Upload only the candidate receipt

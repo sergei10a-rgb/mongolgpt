@@ -1,10 +1,17 @@
 import { describe, expect, test } from "bun:test"
-import { DateTime, Effect, Schema } from "effect"
+import { Cause, DateTime, Effect, Layer, Schema } from "effect"
+import { eq } from "drizzle-orm"
 import { Event } from "@mongolgpt/schema/event"
 import { SessionEvent } from "@mongolgpt/schema/session-event"
 import { SessionV1 } from "@mongolgpt/schema/session-v1"
+import { Database } from "../src/database/database"
+import { EventTable } from "../src/event/sql"
+import { ProjectTable } from "../src/project/sql"
+import { ProjectSchema } from "../src/project/schema"
+import { AbsolutePath } from "../src/schema"
 import { createCloudHistory } from "../src/event/cloud-history"
-import type { EventV2 } from "../src/event"
+import { EventV2 } from "../src/event"
+import { SessionProjector } from "../src/session/projector"
 
 const base = "http://history.mongolgpt.internal/v1"
 const maxRequestBytes = 1024 * 1024 + 4096
@@ -553,6 +560,120 @@ describe("native cloud history transport", () => {
     expect(wire).toEqual(before)
     await Effect.runPromise(client.append(event))
     expect((await readAppend(requests[3])).event.data).toEqual(event.data)
+  })
+
+  test("journals legacy message updates with optional undefined fields as JSON-clean durable data", async () => {
+    const { client, requests } = fixture()
+    await Effect.runPromise(client.initialize)
+    const definition = SessionV1.Event.MessageUpdated
+    const message = Schema.decodeUnknownSync(SessionV1.Info)({
+      id: "msg_cloud",
+      role: "user",
+      sessionID: "ses_cloud",
+      time: { created: 1_717_171_717_000 },
+      agent: "build",
+      model: {
+        providerID: "free",
+        modelID: "auto",
+        variant: undefined,
+      },
+      format: undefined,
+      system: undefined,
+      tools: undefined,
+    })
+    const encoded = Schema.encodeSync(definition.data)({ sessionID: message.sessionID, info: message })
+    if (encoded.info.role !== "user") throw new Error("Expected legacy user message")
+    expect(Object.hasOwn(encoded.info, "format")).toBe(true)
+    expect(Object.hasOwn(encoded.info.model, "variant")).toBe(true)
+    const originalMessage = structuredClone(message)
+    const originalEncoded = structuredClone(encoded)
+    const clean = JSON.parse(JSON.stringify(encoded))
+
+    const local = await Effect.gen(function* () {
+      const { db } = yield* Database.Service
+      const events = yield* EventV2.Service
+      yield* db
+        .insert(ProjectTable)
+        .values({ id: ProjectSchema.ID.make("global"), worktree: AbsolutePath.make("/workspace"), sandboxes: [] })
+        .run()
+      yield* events.publish(SessionV1.Event.Created, {
+        sessionID: message.sessionID,
+        info: Schema.decodeUnknownSync(SessionV1.SessionInfo)({
+          id: "ses_cloud",
+          slug: "cloud",
+          projectID: "global",
+          directory: "/workspace",
+          title: "Cloud",
+          version: "test",
+          time: { created: 1, updated: 1 },
+        }),
+      })
+      yield* events.publish(definition, { sessionID: message.sessionID, info: message })
+      yield* events.check
+      return yield* db.select().from(EventTable).where(eq(EventTable.type, "message.updated.1")).get()
+    }).pipe(
+      Effect.provide(
+        SessionProjector.layer.pipe(
+          Layer.provideMerge(EventV2.layerWith({ journal: client })),
+          Layer.provideMerge(Database.layerFromPath(":memory:")),
+        ),
+      ),
+      Effect.runPromise,
+    )
+
+    const sent = (await readAppend(requests[3])).event
+    expect(sent.type).toBe("message.updated.1")
+    expect(sent.aggregateID).toBe("ses_cloud")
+    expect(sent.seq).toBe(1)
+    expect(sent.data).toEqual(clean)
+    expect(local?.data).toEqual(sent.data)
+    expect(local?.data).toEqual(clean)
+    expect(Object.hasOwn(sent.data.info as Record<string, unknown>, "format")).toBe(false)
+    expect(Object.hasOwn((sent.data.info as { model: Record<string, unknown> }).model, "variant")).toBe(false)
+    expect(message).toEqual(originalMessage)
+    expect(encoded).toEqual(originalEncoded)
+    expect(Object.hasOwn(encoded.info, "format")).toBe(true)
+    expect(Object.hasOwn(encoded.info.model, "variant")).toBe(true)
+  })
+
+  test("does not normalize undefined array elements into JSON nulls before journaling", async () => {
+    const { client, requests } = fixture()
+    await Effect.runPromise(client.initialize)
+    const attempted: EventV2.SerializedEvent[] = []
+    const ArrayUndefined = EventV2.define({
+      type: "test.array.undefined",
+      durable: { aggregate: "id", version: 1 },
+      schema: {
+        id: Schema.String,
+        values: Schema.Array(Schema.Unknown),
+      },
+    })
+
+    const result = await Effect.gen(function* () {
+      const events = yield* EventV2.Service
+      yield* events.publish(ArrayUndefined, { id: "agg_array_undefined", values: [undefined] })
+    }).pipe(
+      Effect.provide(
+        EventV2.layerWith({
+          journal: {
+            ...client,
+            append: (event) => {
+              attempted.push(event)
+              return client.append(event)
+            },
+          },
+        }).pipe(Layer.provide(Database.layerFromPath(":memory:"))),
+      ),
+      Effect.exit,
+      Effect.runPromise,
+    )
+
+    expect(result._tag).toBe("Failure")
+    if (result._tag !== "Failure") throw new Error("Expected invalid cloud event")
+    expect(Cause.pretty(result.cause)).toContain("JournalUnavailableError")
+    expect(attempted).toHaveLength(1)
+    expect(attempted[0].data.values).toEqual([undefined])
+    expect(requests).toHaveLength(2)
   })
 
   test("sends native deletion unchanged through append for the RPC to erase", async () => {

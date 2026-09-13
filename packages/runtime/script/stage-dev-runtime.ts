@@ -9,16 +9,23 @@ import { storageMigrationCommand, verifyStorageIdentity, verifyStorageMigrations
 
 const root = fileURLToPath(new URL("..", import.meta.url))
 const maxResponseBytes = 65_536
+const stageCandidateConfirmation = "STAGE DEV RUNTIME CANDIDATE"
+const updateCandidateConfirmation = "UPDATE DEV RUNTIME CANDIDATE"
+const existingCandidateNamespaceID = "42de22b8608b4dbba375d179198e4003"
 type Requester = (url: string, init: RequestInit) => Promise<Response>
 
 export function candidateStagingContext(env: NodeJS.ProcessEnv) {
+  const updateExisting = env.MONGOLGPT_CANDIDATE_UPDATE_EXISTING === "true"
   if (
     env.GITHUB_ACTIONS !== "true" ||
     env.GITHUB_REPOSITORY !== "sergei10a-rgb/mongolgpt" ||
     env.GITHUB_REF !== "refs/heads/main" ||
     env.RUNNER_OS !== "Linux" ||
     !/^[a-f0-9]{40}$/.test(env.GITHUB_SHA ?? "") ||
-    env.MONGOLGPT_CANDIDATE_CONFIRMATION !== "STAGE DEV RUNTIME CANDIDATE" ||
+    (env.MONGOLGPT_CANDIDATE_UPDATE_EXISTING != null &&
+      !["true", "false"].includes(env.MONGOLGPT_CANDIDATE_UPDATE_EXISTING)) ||
+    env.MONGOLGPT_CANDIDATE_CONFIRMATION !==
+      (updateExisting ? updateCandidateConfirmation : stageCandidateConfirmation) ||
     env.CLOUDFLARE_ACCOUNT_ID !== candidate.account_id ||
     !env.CLOUDFLARE_API_TOKEN?.trim() ||
     !isAbsolute(env.RUNNER_TEMP ?? "") ||
@@ -30,6 +37,7 @@ export function candidateStagingContext(env: NodeJS.ProcessEnv) {
     accountID: candidate.account_id,
     sourceCommit: env.GITHUB_SHA!,
     output: join(env.RUNNER_TEMP!, "runtime-candidate-receipt.json"),
+    updateExisting,
   }
 }
 
@@ -129,6 +137,7 @@ export function verifyCandidateRoutes(
 export function verifyCandidateDeployment(
   settings: Awaited<ReturnType<typeof candidateMetadata>>,
   subdomain: Awaited<ReturnType<typeof candidateMetadata>>,
+  expectedNamespaceID?: string,
 ) {
   const value = settings.value
   const ingress = subdomain.value
@@ -162,6 +171,7 @@ export function verifyCandidateDeployment(
   if (
     typeof sandbox.namespace_id !== "string" ||
     !/^[a-f0-9]{32}$/.test(sandbox.namespace_id) ||
+    (expectedNamespaceID != null && sandbox.namespace_id !== expectedNamespaceID) ||
     sandbox.namespace_id === "ceb126c25207461582b78289fb6bc9d3" ||
     sandbox.class_name !== "MongolGPTSandbox" ||
     (sandbox.script_name != null && sandbox.script_name !== candidate.name)
@@ -205,7 +215,11 @@ async function stage() {
     JSON.parse(await runCandidateCommand(storageMigrationCommand("verify"), 180_000)),
     expected,
   )
-  assertCandidateAbsent(await candidateMetadata(process.env.CLOUDFLARE_API_TOKEN!, "settings"))
+  const existing = identity.updateExisting
+    ? await verifyExistingCandidateBeforeUpdate(process.env.CLOUDFLARE_API_TOKEN!)
+    : undefined
+  if (!identity.updateExisting)
+    assertCandidateAbsent(await candidateMetadata(process.env.CLOUDFLARE_API_TOKEN!, "settings"))
   const folder = await mkdtemp(join(process.env.RUNNER_TEMP!, "mongolgpt-candidate-"))
   await chmod(folder, 0o700)
   const secretPath = join(folder, "secrets.json")
@@ -214,8 +228,9 @@ async function stage() {
     version: packageJSON.version,
     binarySha256: sha256,
     migrations,
+    updateExisting: identity.updateExisting,
     deployment: "not_started",
-    namespaceID: "",
+    namespaceID: existing?.namespaceID ?? "",
     publicIngress: "unverified",
     cutoverReady: false,
   }
@@ -229,6 +244,7 @@ async function stage() {
     const verified = verifyCandidateDeployment(
       await candidateMetadata(process.env.CLOUDFLARE_API_TOKEN!, "settings"),
       await candidateMetadata(process.env.CLOUDFLARE_API_TOKEN!, "subdomain"),
+      existing?.namespaceID,
     )
     verifyCandidateRoutes(
       await candidateMetadata(process.env.CLOUDFLARE_API_TOKEN!, "routes"),
@@ -247,6 +263,17 @@ async function stage() {
   async function save() {
     await writeFile(identity.output, JSON.stringify(receipt, null, 2), { mode: 0o600 })
   }
+}
+
+async function verifyExistingCandidateBeforeUpdate(token: string) {
+  console.log("CANDIDATE_PHASE verify_existing")
+  const verified = verifyCandidateDeployment(
+    await candidateMetadata(token, "settings"),
+    await candidateMetadata(token, "subdomain"),
+    existingCandidateNamespaceID,
+  )
+  verifyCandidateRoutes(await candidateMetadata(token, "routes"), await candidateMetadata(token, "domains"))
+  return verified
 }
 
 export async function runCandidateCommand(

@@ -49,6 +49,33 @@ export class InvalidDurableEventError extends Schema.TaggedErrorClass<InvalidDur
   },
 ) {}
 
+function journalData(type: string, data: Record<string, unknown>) {
+  const parents = new Set<object>()
+  const invalid = () => new InvalidDurableEventError({ type, message: "Invalid cloud event JSON structure" })
+  const visit = (value: unknown, depth: number): unknown => {
+    if (value === null || typeof value !== "object") return value
+    if (depth > 48 || parents.has(value)) throw invalid()
+    if (!Array.isArray(value) && ![Object.prototype, null].includes(Object.getPrototypeOf(value))) return value
+    if (Array.isArray(value) && Object.keys(value).length !== value.length) return value
+    parents.add(value)
+    const properties = Object.getOwnPropertyDescriptors(value)
+    if (Object.values(properties).some((property) => property.enumerable && !Object.hasOwn(property, "value")))
+      throw invalid()
+    // Schema.optional preserves explicit undefined, but JSON object members do not.
+    // Keep array holes and other non-JSON values intact for the strict journal validator.
+    const result = Array.isArray(value)
+      ? value.map((item) => visit(item, depth + 1))
+      : Object.fromEntries(
+          Object.entries(properties)
+            .filter(([, property]) => property.enumerable && property.value !== undefined)
+            .map(([key, property]) => [key, visit(property.value, depth + 1)]),
+        )
+    parents.delete(value)
+    return result
+  }
+  return visit(data, 0) as Record<string, unknown>
+}
+
 const decodeSerializedEvent = (event: SerializedEvent): Payload => {
   const definition = Durable.get(event.type)
   if (!definition?.durable) {
@@ -321,10 +348,11 @@ export const layerWith = (options?: LayerOptions) =>
                             .get()
                             .pipe(Effect.orDie)
                           const latest = row?.seq ?? -1
-                          const encoded = Schema.encodeUnknownSync(definition.data)(
+                          const data = Schema.encodeUnknownSync(definition.data)(
                             event.data,
                             options?.journal ? { onExcessProperty: "error" } : undefined,
                           ) as Record<string, unknown>
+                          const encoded = options?.journal ? journalData(event.type, data) : data
                           if (input?.strictOwner && row?.ownerID && row.ownerID !== input.ownerID) {
                             yield* Effect.die(
                               new InvalidDurableEventError({
