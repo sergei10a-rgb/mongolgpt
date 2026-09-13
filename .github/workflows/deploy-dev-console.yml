@@ -17,6 +17,11 @@ on:
         required: false
         default: false
         type: boolean
+      auth_ui_only:
+        description: "Pinned auth-link hotfix only; preserve dev Console services and settings"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: cloudflare-deploy-dev
@@ -31,7 +36,7 @@ env:
   MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
   MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
   MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true"
-  MONGOLGPT_PREVIEW_ENABLED: ${{ inputs.preview_auth_only && 'true' || vars.MONGOLGPT_PREVIEW_ENABLED }}
+  MONGOLGPT_PREVIEW_ENABLED: ${{ (inputs.preview_auth_only || inputs.auth_ui_only) && 'true' || vars.MONGOLGPT_PREVIEW_ENABLED }}
   MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS: ${{ inputs.root_preview_alias }}
   MONGOLGPT_ENABLE_ADMIN: "false"
   MONGOLGPT_ENABLE_ANALYTICS: "false"
@@ -60,9 +65,18 @@ jobs:
         env:
           DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
           PREVIEW_AUTH_ONLY: ${{ inputs.preview_auth_only }}
+          AUTH_UI_ONLY: ${{ inputs.auth_ui_only }}
+          ROOT_PREVIEW_ALIAS: ${{ inputs.root_preview_alias }}
         run: |
           expected="DEPLOY DEV CONSOLE dev.mgpt.mn"
           if [ "$PREVIEW_AUTH_ONLY" = "true" ]; then expected="ENABLE OWNER DEV PREVIEW AUTH"; fi
+          if [ "$AUTH_UI_ONLY" = "true" ]; then
+            expected="PUBLISH DEV CONSOLE AUTH LINKS"
+            if [ "$PREVIEW_AUTH_ONLY" = "true" ] || [ "$ROOT_PREVIEW_ALIAS" != "true" ]; then
+              echo "Auth UI hotfix must preserve the existing preview and root aliases."
+              exit 1
+            fi
+          fi
           if [ "$DEPLOY_CONFIRMATION" != "$expected" ]; then
             echo "Dev console deploy баталгаажуулалт буруу байна."
             exit 1
@@ -70,9 +84,19 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: ${{ inputs.auth_ui_only && 0 || 1 }}
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
+        with:
+          install-flags: --frozen-lockfile
+
+      - name: Prepare the pinned website-only release
+        if: inputs.auth_ui_only
+        run: |
+          bun test --cwd packages/script test/console-ui-deployment-guard.test.ts test/console-auth-release.test.ts
+          bun script/prepare-console-auth-release.ts
 
       - name: Verify public console and OAuth artifacts
         run: |
@@ -139,8 +163,31 @@ jobs:
           SST_SECRET_TurnstileSecretKey: "1x0000000000000000000000000000000AA"
           SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: ${{ secrets.MONGOLGPT_GATEWAY_SESSION_SECRET }}
           PREVIEW_AUTH_ONLY: ${{ inputs.preview_auth_only }}
+          AUTH_UI_ONLY: ${{ inputs.auth_ui_only }}
         run: |
           bun run deploy:preflight -- dev --console-only
+          if [ "$AUTH_UI_ONLY" = "true" ]; then
+            set -euo pipefail
+            export PULUMI_TF_BRIDGE_ACCURATE_PF_BRIDGE_PREVIEW=true
+            umask 077
+            diff_file="$(mktemp "$RUNNER_TEMP/mongolgpt-console-ui-diff.XXXXXX")"
+            error_file="$(mktemp "$RUNNER_TEMP/mongolgpt-console-ui-error.XXXXXX")"
+            output_file="$(mktemp "$RUNNER_TEMP/mongolgpt-console-ui-output.XXXXXX")"
+            trap 'rm -f "$diff_file" "$error_file" "$output_file"' EXIT
+            if ! bun sst diff --stage=dev --target Console --json >"$diff_file" 2>"$error_file"; then
+              echo "Console UI deployment plan failed; private output was not printed."
+              bun script/sst-error-diagnostics.ts .sst/log "$error_file" .sst/log/sst.log
+              exit 1
+            fi
+            bun "$AUTH_UI_CONTROL/script/verify-console-ui-deployment.ts" "$diff_file"
+            if ! bun sst deploy --stage=dev --target Console >"$output_file" 2>"$error_file"; then
+              echo "Console UI publication failed; inspect state before retrying. Private output was not printed."
+              bun script/sst-error-diagnostics.ts .sst/log "$error_file" .sst/log/sst.log
+              exit 1
+            fi
+            echo "Pinned auth-link hotfix published without migrations or AuthApi deployment."
+            exit 0
+          fi
           if [ "$PREVIEW_AUTH_ONLY" = "true" ]; then
             bun sst deploy --stage=dev --target Console --print-logs
             exit 0
