@@ -346,7 +346,12 @@ export function inspectAppHtml(html: string, appUrl?: string): AppRuntimeContrac
   if (mode === "local-bridge" && server.hostname !== "localhost" && server.hostname !== "127.0.0.1") {
     throw new Error("local bridge runtime must use a loopback server")
   }
-  if (mode === "hosted" && appUrl && server.origin === new URL(appUrl).origin) {
+  const preview =
+    meta(html, "mongolgpt-owner-preview") === "true" &&
+    channel === "dev" &&
+    appUrl === "https://preview.dev.mgpt.mn" &&
+    serverUrl === "https://preview.dev.mgpt.mn"
+  if (mode === "hosted" && appUrl && server.origin === new URL(appUrl).origin && !preview) {
     throw new Error("hosted runtime cannot use the static app origin")
   }
 

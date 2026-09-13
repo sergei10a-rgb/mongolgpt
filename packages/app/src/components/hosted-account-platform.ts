@@ -89,7 +89,7 @@ export function createHostedAccountPlatform(input: HostedAccountPlatformInput): 
       }
     },
     login: async () => {
-      navigate(hostedLoginUrl(accountUrl))
+      navigate(hostedLoginUrl(accountUrl, runtimeOrigin))
       return pendingNavigation()
     },
     switchWorkspace: async (workspaceID) => {

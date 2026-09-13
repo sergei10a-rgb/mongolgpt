@@ -1,0 +1,72 @@
+name: Deploy owner dev preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "DEPLOY OWNER DEV PREVIEW"
+        required: true
+        type: string
+
+concurrency:
+  group: cloudflare-deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  MONGOLGPT_CHANNEL: dev
+  VITE_MONGOLGPT_APP_URL: https://preview.dev.mgpt.mn
+  VITE_MONGOLGPT_PUBLIC_URL: https://dev.mgpt.mn
+  VITE_MONGOLGPT_SERVER_URL: https://preview.dev.mgpt.mn
+  VITE_MONGOLGPT_DOCS_URL: https://docs.dev.mgpt.mn/docs
+  VITE_MONGOLGPT_PREVIEW_ENABLED: "true"
+  VITE_MONGOLGPT_RELEASE_SHA: ${{ github.sha }}
+
+jobs:
+  preview:
+    if: github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: dev
+    steps:
+      - name: Validate isolated preview confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = "DEPLOY OWNER DEV PREVIEW"
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Check preview boundaries and current UI
+        run: |
+          bun run --cwd packages/console/admin typecheck
+          bun --cwd packages/console/admin test ./test/preview.test.ts
+          bun --cwd packages/runtime test ./test/preview-deploy.test.ts
+          bun run --cwd packages/app typecheck
+          bun --cwd packages/app test --conditions=browser --preload ./happydom.ts ./src/utils/owner-preview.test.ts
+          bun --cwd packages/script test ./test/owner-preview-artifact.test.ts
+          bun run --cwd packages/app build
+          bun run --cwd packages/app verify:hosted-artifact
+
+      - name: Protect and deploy only isolated owner preview
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCESS_API_TOKEN: ${{ secrets.CLOUDFLARE_ACCESS_API_TOKEN }}
+          MONGOLGPT_OWNER_DEV_PREVIEW_CONFIRMATION: ${{ inputs.confirmation }}
+        run: bun packages/runtime/script/deploy-dev-preview.ts
+
+      - name: Upload non-secret deployment receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: owner-preview-dev-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: ${{ runner.temp }}/runtime-dev-preview-receipt.json

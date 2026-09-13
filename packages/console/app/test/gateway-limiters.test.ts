@@ -74,7 +74,9 @@ mock.module("@mongolgpt/console-core/drizzle/index.js", () => ({
   sql: (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values }),
 }))
 
+const { KeyRateLimitTable } = await import("@mongolgpt/console-core/schema/ip.sql.js")
 mock.module("@mongolgpt/console-core/schema/ip.sql.js", () => ({
+  KeyRateLimitTable,
   IpTable: {
     ip: "ip",
     usage: "usage",

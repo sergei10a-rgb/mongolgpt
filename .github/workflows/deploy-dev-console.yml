@@ -12,6 +12,11 @@ on:
         required: false
         default: true
         type: boolean
+      preview_auth_only:
+        description: "Owner preview auth only; no migrations or AuthApi deployment"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: cloudflare-deploy-dev
@@ -26,6 +31,7 @@ env:
   MONGOLGPT_DOMAIN: ${{ vars.MONGOLGPT_DOMAIN }}
   MONGOLGPT_ENABLE_HOSTED_SERVICES: "true"
   MONGOLGPT_DEPLOY_CONSOLE_ONLY: "true"
+  MONGOLGPT_PREVIEW_ENABLED: ${{ inputs.preview_auth_only && 'true' || vars.MONGOLGPT_PREVIEW_ENABLED }}
   MONGOLGPT_ENABLE_ROOT_PREVIEW_ALIAS: ${{ inputs.root_preview_alias }}
   MONGOLGPT_ENABLE_ADMIN: "false"
   MONGOLGPT_ENABLE_ANALYTICS: "false"
@@ -53,8 +59,11 @@ jobs:
       - name: Validate exact dev console confirmation
         env:
           DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+          PREVIEW_AUTH_ONLY: ${{ inputs.preview_auth_only }}
         run: |
-          if [ "$DEPLOY_CONFIRMATION" != "DEPLOY DEV CONSOLE dev.mgpt.mn" ]; then
+          expected="DEPLOY DEV CONSOLE dev.mgpt.mn"
+          if [ "$PREVIEW_AUTH_ONLY" = "true" ]; then expected="ENABLE OWNER DEV PREVIEW AUTH"; fi
+          if [ "$DEPLOY_CONFIRMATION" != "$expected" ]; then
             echo "Dev console deploy баталгаажуулалт буруу байна."
             exit 1
           fi
@@ -129,8 +138,13 @@ jobs:
           SST_SECRET_MongolGPTRuntimeAuthSecret: ${{ secrets.MONGOLGPT_RUNTIME_AUTH_SECRET }}
           SST_SECRET_TurnstileSecretKey: "1x0000000000000000000000000000000AA"
           SST_SECRET_MONGOLGPT_GATEWAY_SESSION_SECRET: ${{ secrets.MONGOLGPT_GATEWAY_SESSION_SECRET }}
+          PREVIEW_AUTH_ONLY: ${{ inputs.preview_auth_only }}
         run: |
           bun run deploy:preflight -- dev --console-only
+          if [ "$PREVIEW_AUTH_ONLY" = "true" ]; then
+            bun sst deploy --stage=dev --target Console --print-logs
+            exit 0
+          fi
           set -o pipefail
           if ! database_id="$(bun sst state export --stage=dev | bun script/resolve-sst-d1-state.ts)"; then
             echo "Dev SST state-д Database алга. Эхлээд үндсэн Cloudflare deploy workflow ажиллуулах шаардлагатай."

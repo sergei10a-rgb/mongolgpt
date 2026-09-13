@@ -1,11 +1,20 @@
 import { accountRuntimeToken } from "../../lib/runtime-token"
+import {
+  hostedPreviewConfig,
+  hostedPreviewRuntimeAudience,
+  type HostedPreviewConfigInput,
+} from "../../lib/hosted-preview"
 import { canonicalHttpsOrigin, currentAuthAccount } from "./helpers"
 
 const PREFLIGHT_MAX_AGE = "600"
 
-export function runtimeTokenPreflight(request: Request, appUrl: string | undefined) {
+export function runtimeTokenPreflight(
+  request: Request,
+  appUrl: string | undefined,
+  preview?: HostedPreviewConfigInput,
+) {
   const appOrigin = canonicalHttpsOrigin(appUrl)
-  const origin = requestOrigin(request, appOrigin)
+  const origin = requestOrigin(request, appOrigin, preview)
   if (!origin) return invalidOriginResponse()
 
   const headers = corsHeaders(origin, true)
@@ -29,22 +38,15 @@ export async function runtimeTokenRequest(
       suspended: boolean
     }>
     workspaces: (accountID: string) => Promise<readonly { id: string; name: string }[]>
+    preview?: HostedPreviewConfigInput
     now?: () => number
   },
 ) {
   const appOrigin = canonicalHttpsOrigin(input.appUrl)
-  const origin = requestOrigin(request, appOrigin)
+  const origin = requestOrigin(request, appOrigin, input.preview)
   if (!origin) return invalidOriginResponse()
 
   const headers = corsHeaders(origin, true)
-  const runtimeAudience = canonicalHttpsOrigin(input.runtimeUrl)
-  if (!runtimeAudience) {
-    return Response.json(
-      { error: "runtime_not_configured", message: "MongolGPT runtime серверийн хаяг тохируулагдаагүй байна." },
-      { status: 500, headers },
-    )
-  }
-
   const session = await input.session()
   const account = currentAuthAccount(session)
   if (!account && session.suspended) {
@@ -60,17 +62,49 @@ export async function runtimeTokenRequest(
     )
   }
 
+  const runtimeAudience = runtimeTokenAudience(request, account, input)
+  if (runtimeAudience.status === "forbidden") {
+    return Response.json(
+      { error: "preview_forbidden", message: "Preview runtime token энэ бүртгэлд зөвшөөрөгдөөгүй байна." },
+      { status: 403, headers },
+    )
+  }
+  if (runtimeAudience.status === "not_configured") {
+    return Response.json(
+      { error: "runtime_not_configured", message: "MongolGPT runtime серверийн хаяг тохируулагдаагүй байна." },
+      { status: 500, headers },
+    )
+  }
+
   return accountRuntimeToken(
     request,
     {
       account,
-      audience: runtimeAudience,
+      audience: runtimeAudience.audience,
       secret: input.secret,
       workspaces: input.workspaces,
       now: input.now,
     },
     headers,
   )
+}
+
+function runtimeTokenAudience(
+  request: Request,
+  account: { email: string },
+  input: { runtimeUrl: string | undefined; preview?: HostedPreviewConfigInput },
+): { status: "allowed"; audience: string } | { status: "forbidden" } | { status: "not_configured" } {
+  const preview = input.preview
+    ? hostedPreviewRuntimeAudience({
+        ...input.preview,
+        requestOrigin: request.headers.get("Origin"),
+        accountEmail: account.email,
+      })
+    : { matched: false as const }
+  if (preview.matched && preview.status === "allowed") return { status: "allowed", audience: preview.audience }
+  if (preview.matched) return { status: "forbidden" }
+  const audience = canonicalHttpsOrigin(input.runtimeUrl)
+  return audience ? { status: "allowed", audience } : { status: "not_configured" }
 }
 
 function corsHeaders(appOrigin: string, includeOrigin: boolean) {
@@ -85,9 +119,13 @@ function corsHeaders(appOrigin: string, includeOrigin: boolean) {
   return headers
 }
 
-function requestOrigin(request: Request, appOrigin: string | undefined) {
+function requestOrigin(request: Request, appOrigin: string | undefined, preview?: HostedPreviewConfigInput) {
   const origin = request.headers.get("Origin")
-  return appOrigin && origin === appOrigin ? appOrigin : undefined
+  if (appOrigin && origin === appOrigin) return appOrigin
+  const configured = preview && hostedPreviewConfig(preview)
+  if (configured && origin === configured.origin && new URL(request.url).origin === preview?.hostedConsoleUrl)
+    return origin
+  return undefined
 }
 
 function invalidOriginResponse() {

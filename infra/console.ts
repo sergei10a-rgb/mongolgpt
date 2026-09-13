@@ -501,6 +501,8 @@ export const consoleApp = new sst.cloudflare.x.SolidStart("Console", {
     VITE_AUTH_URL: auth.url.apply((url) => url!),
     VITE_MONGOLGPT_APP_URL: appOrigin,
     VITE_MONGOLGPT_RUNTIME_URL: runtimeOrigin,
+    VITE_MONGOLGPT_PREVIEW_ENABLED:
+      $app.stage === "dev" && process.env.MONGOLGPT_PREVIEW_ENABLED === "true" ? "true" : "false",
     VITE_MONGOLGPT_BILLING_ENABLED: "false",
     MONGOLGPT_BILLING_PROVIDER: "disabled",
     VITE_MONGOLGPT_PUBLIC_URL: publicOrigin,

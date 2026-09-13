@@ -57,6 +57,15 @@ export function resolveRuntimeMetadata(env = process.env) {
   const fallback = host ? `http://${host}:${port}` : "http://localhost:4096"
   const configured = httpUrl(env.VITE_MONGOLGPT_SERVER_URL)
   const hosted = hostedWeb(env)
+  const preview =
+    env.VITE_MONGOLGPT_PREVIEW_ENABLED === "true" &&
+    resolveChannel(env) === "dev" &&
+    appUrl === "https://preview.dev.mgpt.mn" &&
+    configured === appUrl &&
+    publicUrl === "https://dev.mgpt.mn"
+  if (env.VITE_MONGOLGPT_PREVIEW_ENABLED === "true" && !preview) {
+    throw new Error("Owner preview requires exact isolated dev origins")
+  }
   if (hosted && (!appUrl || local(appUrl) || new URL(appUrl).protocol !== "https:")) {
     throw new Error("MongolGPT-ийн байршуулсан веб хувилбарт локал бус HTTPS аппын URL шаардлагатай")
   }
@@ -67,7 +76,7 @@ export function resolveRuntimeMetadata(env = process.env) {
     hosted &&
     (!configured ||
       local(configured) ||
-      (appUrl && new URL(configured).origin === new URL(appUrl).origin) ||
+      (!preview && appUrl && new URL(configured).origin === new URL(appUrl).origin) ||
       (publicUrl && new URL(configured).origin === new URL(publicUrl).origin) ||
       new URL(configured).pathname !== "/" ||
       new URL(configured).search !== "" ||

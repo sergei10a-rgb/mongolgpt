@@ -1,15 +1,22 @@
 import { describe, expect, test } from "bun:test"
-import { verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
+import { RuntimeCapabilityError, verifyRuntimeCapability } from "@mongolgpt/runtime-auth"
 import { runtimeTokenPreflight, runtimeTokenRequest } from "./runtime-token-handler"
 
 const appUrl = "https://app.dev.mgpt.mn"
 const runtimeUrl = "https://runtime.dev.mgpt.mn"
+const previewUrl = "https://preview.dev.mgpt.mn"
 const secret = "runtime-auth-secret-with-at-least-thirty-two-characters"
 const now = 1_700_000_000
 const account = { id: "acc_123", email: "user@mgpt.mn", authVersion: 4 }
+const owner = { id: "acc_owner", email: "sergei10a@gmail.com", authVersion: 8 }
 
-function request(method = "POST", origin = appUrl, workspaceID?: string) {
-  return new Request("https://dev.mgpt.mn/auth/runtime-token", {
+function request(
+  method = "POST",
+  origin = appUrl,
+  workspaceID?: string,
+  url = "https://dev.mgpt.mn/auth/runtime-token",
+) {
+  return new Request(url, {
     method,
     headers: {
       ...(origin ? { origin } : {}),
@@ -23,10 +30,18 @@ function handler(input: {
   accounts?: Record<string, typeof account>
   suspended?: boolean
   runtime?: string
+  requestUrl?: string
+  origin?: string
   workspaceID?: string
   workspaces?: readonly { id: string; name: string }[]
+  preview?: {
+    enabled: boolean
+    hostedAppUrl: string | undefined
+    hostedRuntimeUrl: string | undefined
+    hostedConsoleUrl: string | undefined
+  }
 }) {
-  return runtimeTokenRequest(request("POST", appUrl, input.workspaceID), {
+  return runtimeTokenRequest(request("POST", input.origin ?? appUrl, input.workspaceID, input.requestUrl), {
     appUrl,
     runtimeUrl: input.runtime ?? runtimeUrl,
     secret,
@@ -36,10 +51,34 @@ function handler(input: {
       suspended: input.suspended ?? false,
     }),
     workspaces: async () => input.workspaces ?? [{ id: "wrk_primary", name: "Үндсэн баг" }],
+    preview: input.preview,
   })
 }
 
 describe("hosted runtime capability route", () => {
+  test("preview browser preflight reaches the dev console only when explicitly enabled", () => {
+    const response = runtimeTokenPreflight(request("OPTIONS", previewUrl), appUrl, previewConfig())
+    expect(response.status).toBe(204)
+    expect(response.headers.get("access-control-allow-origin")).toBe(previewUrl)
+    expect(response.headers.get("access-control-allow-credentials")).toBe("true")
+    expect(runtimeTokenPreflight(request("OPTIONS", previewUrl), appUrl).status).toBe(403)
+    expect(
+      runtimeTokenPreflight(
+        request("OPTIONS", previewUrl, undefined, "https://mgpt.mn/auth/runtime-token"),
+        appUrl,
+        previewConfig(),
+      ).status,
+    ).toBe(403)
+  })
+  test("preview keeps anonymous, suspension and workspace membership boundaries", async () => {
+    const base = { origin: previewUrl, preview: previewConfig() }
+    expect((await handler(base)).status).toBe(401)
+    expect((await handler({ ...base, suspended: true })).status).toBe(423)
+    expect(
+      (await handler({ ...base, current: owner.id, accounts: { [owner.id]: owner }, workspaceID: "wrk_foreign" }))
+        .status,
+    ).toBe(403)
+  })
   test("issues a short audience-bound capability for the current account", async () => {
     const response = await handler({ current: account.id, accounts: { [account.id]: account } })
 
@@ -150,7 +189,92 @@ describe("hosted runtime capability route", () => {
     expect(forbidden.status).toBe(403)
     expect(await forbidden.json()).toMatchObject({ error: "workspace_forbidden" })
   })
+
+  test("issues preview-audience capabilities only for the owner on the exact preview request origin", async () => {
+    const workspaces = [
+      { id: "wrk_first", name: "Нэгдүгээр баг" },
+      { id: "wrk_second", name: "Хоёрдугаар баг" },
+    ]
+    const response = await handler({
+      current: owner.id,
+      accounts: { [owner.id]: owner },
+      origin: previewUrl,
+      workspaceID: "wrk_second",
+      workspaces,
+      preview: previewConfig(),
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get("access-control-allow-origin")).toBe(previewUrl)
+    const body: unknown = await response.json()
+    if (!runtimeTokenBody(body)) throw new Error("Runtime token response shape is invalid")
+    expect(body.workspace).toEqual(workspaces[1])
+    const verified = await verifyRuntimeCapability({ token: body.token, audience: previewUrl, secret, now })
+    expect(verified).toMatchObject({
+      sub: owner.id,
+      workspaceID: "wrk_second",
+      authVersion: owner.authVersion,
+      aud: previewUrl,
+    })
+    await expect(
+      verifyRuntimeCapability({ token: body.token, audience: runtimeUrl, secret, now }),
+    ).rejects.toBeInstanceOf(RuntimeCapabilityError)
+  })
+
+  test("does not infer preview audience from owner email without the exact preview request origin", async () => {
+    const response = await handler({
+      current: owner.id,
+      accounts: { [owner.id]: owner },
+      requestUrl: "https://dev.mgpt.mn/auth/runtime-token",
+      preview: previewConfig(),
+    })
+
+    expect(response.status).toBe(200)
+    const body: unknown = await response.json()
+    if (!runtimeTokenBody(body)) throw new Error("Runtime token response shape is invalid")
+    expect(await verifyRuntimeCapability({ token: body.token, audience: runtimeUrl, secret, now })).toMatchObject({
+      aud: runtimeUrl,
+    })
+    await expect(
+      verifyRuntimeCapability({ token: body.token, audience: previewUrl, secret, now }),
+    ).rejects.toBeInstanceOf(RuntimeCapabilityError)
+  })
+
+  test("rejects preview-origin runtime tokens for non-owners, disabled preview, and production", async () => {
+    for (const input of [
+      { current: account.id, accounts: { [account.id]: account }, preview: previewConfig() },
+      { current: owner.id, accounts: { [owner.id]: owner }, preview: previewConfig({ enabled: false }) },
+      {
+        current: owner.id,
+        accounts: { [owner.id]: owner },
+        preview: previewConfig({ hostedAppUrl: "https://app.mgpt.mn" }),
+      },
+    ]) {
+      const response = await handler({
+        ...input,
+        origin: previewUrl,
+      })
+      expect(response.status).toBe(403)
+      expect(response.headers.get("cache-control")).toBe("no-store")
+    }
+  })
 })
+
+function previewConfig(
+  input: Partial<{
+    enabled: boolean
+    hostedAppUrl: string | undefined
+    hostedRuntimeUrl: string | undefined
+    hostedConsoleUrl: string | undefined
+  }> = {},
+) {
+  return {
+    enabled: input.enabled ?? true,
+    hostedAppUrl: input.hostedAppUrl ?? appUrl,
+    hostedRuntimeUrl: input.hostedRuntimeUrl ?? runtimeUrl,
+    hostedConsoleUrl: input.hostedConsoleUrl ?? "https://dev.mgpt.mn",
+  }
+}
 
 function runtimeTokenBody(value: unknown): value is {
   token: string

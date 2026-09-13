@@ -15,6 +15,7 @@ import {
 import { useLanguage } from "@/context/language"
 import { resolveWebRuntime, type WebRuntime } from "@/utils/web-runtime"
 import { Splash } from "@mongolgpt/ui/logo"
+import { ownerPreviewOrigin } from "@/utils/owner-preview"
 
 export type HostedAccount = { id: string; email: string }
 export type HostedWorkspace = { id: string; name: string }
@@ -42,9 +43,12 @@ export function hostedRuntimeTokenUrl(publicOrigin: string) {
   return new URL("/auth/runtime-token", requiredHostedOrigin(publicOrigin)).toString()
 }
 
-export function hostedLoginUrl(publicOrigin: string) {
+export function hostedLoginUrl(publicOrigin: string, runtimeUrl?: string) {
   const url = new URL("/auth/authorize", requiredHostedOrigin(publicOrigin))
-  url.searchParams.set("continue", "/auth/app")
+  url.searchParams.set(
+    "continue",
+    publicOrigin === "https://dev.mgpt.mn" && runtimeUrl === ownerPreviewOrigin ? "/auth/preview" : "/auth/app",
+  )
   return url.toString()
 }
 
@@ -437,7 +441,7 @@ export function HostedAccountGate(props: ParentProps) {
                   variant="primary"
                   onClick={() => {
                     if (!publicOrigin) return
-                    window.location.assign(hostedLoginUrl(publicOrigin))
+                    window.location.assign(hostedLoginUrl(publicOrigin, runtimeUrl))
                   }}
                   disabled={!publicOrigin}
                 >
@@ -502,6 +506,7 @@ function hostedRuntimeFallback(): WebRuntime | undefined {
   const origin = browserHttpOrigin(location.origin)
   if (!origin) return undefined
   return resolveWebRuntime({
+    ownerPreview: import.meta.env.VITE_MONGOLGPT_PREVIEW_ENABLED === "true",
     dev: import.meta.env.DEV,
     origin,
     serverHost: import.meta.env.VITE_MONGOLGPT_SERVER_HOST,

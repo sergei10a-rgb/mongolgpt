@@ -39,6 +39,9 @@ export default [
         `<meta name="mongolgpt-runtime-mode" content="${runtime.mode}">`,
         `<meta name="mongolgpt-server-url" content="${runtime.serverUrl}">`,
         `<meta name="mongolgpt-release-sha" content="${releaseSha}">`,
+        ...(process.env.VITE_MONGOLGPT_PREVIEW_ENABLED === "true"
+          ? ['<meta name="mongolgpt-owner-preview" content="true">']
+          : []),
       ].join("\n    ")
       return html.replace("</head>", `    ${metadata}\n  </head>`)
     },

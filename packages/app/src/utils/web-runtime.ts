@@ -1,3 +1,5 @@
+import { isOwnerPreviewRuntime } from "./owner-preview"
+
 export type WebRuntime = {
   mode: "local-bridge" | "hosted"
   serverUrl: string
@@ -9,6 +11,7 @@ type ResolveWebRuntimeInput = {
   serverHost?: string
   serverPort?: string
   serverUrl?: string
+  ownerPreview?: boolean
 }
 
 function normalizeHttpUrl(input: string) {
@@ -39,7 +42,7 @@ export function resolveWebRuntime(input: ResolveWebRuntimeInput): WebRuntime {
     ? normalizeHttpUrl(configured)
     : input.dev
       ? normalizeHttpUrl(`http://${input.serverHost || "localhost"}:${input.serverPort || "4096"}`)
-      : inferredServerUrl ?? "http://localhost:4096"
+      : (inferredServerUrl ?? "http://localhost:4096")
 
   if (
     !input.dev &&
@@ -53,7 +56,11 @@ export function resolveWebRuntime(input: ResolveWebRuntimeInput): WebRuntime {
     }
   }
 
-  if (configured && new URL(serverUrl).origin === new URL(normalizeHttpUrl(input.origin)).origin) {
+  if (
+    configured &&
+    new URL(serverUrl).origin === new URL(normalizedOrigin).origin &&
+    !(input.ownerPreview && isOwnerPreviewRuntime(normalizedOrigin, serverUrl))
+  ) {
     throw new Error("MongolGPT-ийн веб аппын хаягийг API runtime болгон ашиглах боломжгүй")
   }
 
