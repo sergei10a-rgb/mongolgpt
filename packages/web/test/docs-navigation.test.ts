@@ -44,6 +44,23 @@ test("docs head нь Starlight-ийн canonical title-ийг давхардуу�
   expect(head).not.toContain("<title")
 })
 
+test("загварын жишээнд хасагдсан synthetic route-ийг санал болгохгүй", () => {
+  for (const file of files) {
+    const source = readFileSync(join(docsRoot, file), "utf8")
+    for (const token of marked.lexer(source)) {
+      if (token.type !== "code") continue
+      expect(token.text, file).not.toMatch(/\bmongolgpt\/free-auto\b/)
+    }
+    expect(source, file).not.toMatch(/^#{1,6} .*Free Auto/gm)
+  }
+
+  const providers = readFileSync(join(docsRoot, "providers.mdx"), "utf8")
+  expect(providers).toContain("mongolgpt models mongolgpt --refresh")
+  expect(providers).toContain("## Дагалдах үнэгүй загварууд")
+  expect(providers).toContain("### Каталог шинэчлэгдэх нь")
+  expect(providers).toContain("### Нийлүүлэгч хүсэлтийг татгалзвал")
+})
+
 test("desktop агуулгын жагсаалтын урт Монгол гарчгийг тайрахгүй", () => {
   const css = readFileSync(join(import.meta.dir, "..", "src", "styles", "custom.css"), "utf8")
   const container = css.match(/\.right-sidebar-panel \.sl-container \{([^}]+)\}/)?.[1]

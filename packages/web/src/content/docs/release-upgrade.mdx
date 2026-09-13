@@ -75,7 +75,7 @@ Hosted rollout дараах дарааллыг баримтална.
 1. Typecheck, unit, browser E2E, CLI smoke, Desktop packaged/installed smoke болон secret scan ногоон байна.
 2. D1 migration-ийг шинэ runtime болон console-оос өмнө хэрэгжүүлнэ.
 3. Runtime, console, static Web app, docs болон admin-ийг ижил баталгаажсан commit-оос байршуулна.
-4. Health endpoint-оос гадна login, JSON schema/content-type, runtime session, Free Auto model call, usage, payment sandbox болон admin flow-ийг smoke test-ээр шалгана.
+4. Health endpoint-оос гадна login, JSON schema/content-type, runtime session, каталогоос сонгосон бодит үнэгүй загварын хүсэлт, usage, payment sandbox болон admin flow-ийг smoke test-ээр шалгана.
 5. Release SHA, channel болон domain boundary нь deploy manifest-тай таарч байгааг батална.
 6. Админы **Хувилбар ба түгээлт** шалгалт manifest дахь хувилбарыг яг тохирох `mongolgpt-v<version>` GitHub tag, бүх CLI asset, Windows Desktop-ийн заавал asset, нэмэгдсэн optional Desktop платформ бүрийн бүтэн бүлэг, `SHA256SUMS`, updater metadata, `mongolgpt`, `@mongolgpt/sdk`, `@mongolgpt/plugin`, `@mongolgpt/ui` npm dist-tag-тай тулган ногоон болсныг батална.
 
@@ -103,6 +103,6 @@ Hosted rollback нь зөвхөн хуучин Worker code буцаах ажил
 
 - Desktop/CLI Монгол хэлээр нээгдэж, `MongolGPT` нэр болон icon зөв байна.
 - Нэг аккаунтаар Web/Desktop/CLI нэвтрэлт, logout болон session refresh ажиллана.
-- Free Auto, BYOK, OpenRouter/NVIDIA fallback болон local model тус бүр бодит эсвэл sandbox smoke-оор шалгагдана.
+- Дагалдах үнэгүй загварын каталог ба бодит хүсэлт, OpenRouter/NVIDIA BYOK болон local model тус бүр шалгагдана. Хиймэл model server-ийн тестийг гаднын нийлүүлэгчийн бодит ажиллагааны нотолгоо гэж үзэхгүй; автоматаар үйлчилгээ солих горим гэж тайлагнахгүй.
 - MCP, skill, plugin болон terminal permission хуучин тохиргооноос санаандгүй өргөжөөгүй байна.
 - Version, release SHA, channel, checksum болон changelog хоорондоо таарна.
