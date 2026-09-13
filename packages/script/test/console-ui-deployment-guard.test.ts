@@ -113,6 +113,48 @@ describe("Console UI deployment guard", () => {
     rejects([entry])
   })
 
+  test("accepts the matched three-phase local builder replacement exactly once", () => {
+    const local = {
+      ...builder(),
+      op: "replace",
+      keys: ["triggers"],
+      diffs: ["triggers"],
+      detailedDiff: { "triggers[0]": { diffKind: "update-replace", inputDiff: true } },
+    }
+    local.new.id = ""
+    const phases = [
+      { ...structuredClone(local), op: "create-replacement", logical: false },
+      { ...structuredClone(local), logical: true },
+      {
+        urn: local.urn,
+        type: local.type,
+        provider: local.provider,
+        op: "delete-replaced",
+        logical: false,
+        old: { ...structuredClone(local.old), delete: true },
+        new: null,
+      },
+    ]
+    expect(verifyConsoleUiDeploymentDiff([phases[0], phases[1], script(), url(), phases[2]])).toEqual({
+      workerUpdates: 1,
+      builderUpdates: 1,
+      urlUpdates: 1,
+    })
+    rejects([script(), phases[0], phases[1]])
+    rejects([script(), ...phases, phases[2]])
+    rejects([script(), phases[2], phases[0], phases[1]])
+    rejects([script(), phases[0], { ...phases[1], provider: "different" }, phases[2]])
+    rejects([script(), phases[0], phases[1], { ...phases[2], old: { ...local.old, id: "different" } }])
+    rejects([script(), phases[0], phases[1], { ...phases[2], new: local.new }])
+    rejects([script(), phases[0], phases[1], { ...phases[2], diffs: ["environment"] }])
+    const executable = structuredClone(phases)
+    executable[0].new!.inputs.create = "unapproved command"
+    executable[1].new!.inputs.create = "unapproved command"
+    rejects([script(), ...executable])
+    const cloud = phases.map((phase) => ({ ...phase, urn: script().urn, type: scriptType }))
+    rejects(cloud)
+  })
+
   test.each([
     "bindings",
     "compatibilityDate",
@@ -443,7 +485,11 @@ describe("Console UI deployment guard", () => {
             op: "private-do-not-print",
             urn: "private-do-not-print",
             diffs: ["private-do-not-print"],
-            old: { inputs: { bindings: "private-do-not-print" } },
+            detailedDiff: {
+              "environment.private-do-not-print": { diffKind: "another-private-value", inputDiff: true },
+              "private-do-not-print": { diffKind: "update", inputDiff: false },
+            },
+            old: { "private-do-not-print": true, inputs: { bindings: "private-do-not-print" } },
             new: { inputs: { bindings: "another-private-value" } },
           },
         ]),
@@ -452,6 +498,8 @@ describe("Console UI deployment guard", () => {
       expect(described.exitCode).toBe(1)
       expect(described.stderr.toString()).toContain('"resource":"other"')
       expect(described.stderr.toString()).toContain('"changedInputs":["bindings"]')
+      expect(described.stderr.toString()).toContain('"unknownFields":1')
+      expect(described.stderr.toString()).toContain('"field":"environment-entry","kind":"unknown"')
       expect(described.stderr.toString()).not.toContain("private-do-not-print")
       expect(described.stderr.toString()).not.toContain("another-private-value")
       await Bun.write(file, JSON.stringify([script()]))

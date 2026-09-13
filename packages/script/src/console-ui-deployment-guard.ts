@@ -163,19 +163,98 @@ export function describeConsoleUiDeploymentDiff(value: unknown) {
         resource: typeof entry.urn === "string" ? (resources.get(entry.urn) ?? "other") : "invalid",
         operation: typeof entry.op === "string" && operations.includes(entry.op) ? entry.op : "unknown",
         changedInputs,
+        states: [entry.old, entry.new].map((raw) => {
+          if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { present: false }
+          const state = raw as Record<string, unknown>
+          const inputs = state.inputs
+          return {
+            present: true,
+            unknownFields: Object.keys(state).filter((key) => !stateFields.includes(key)).length,
+            deleted: state.delete === true,
+            inputs: !inputs || typeof inputs !== "object" ? typeof inputs : Array.isArray(inputs) ? "array" : "object",
+            codeHash:
+              typeof (inputs as Record<string, unknown> | undefined)?.contentSha256 === "string"
+                ? hash.test((inputs as Record<string, string>).contentSha256)
+                  ? "hash"
+                  : "not-hash"
+                : "missing",
+          }
+        }),
+        validation: diagnosticReason(
+          value.filter((item) => item && typeof item === "object" && item.urn === entry.urn),
+        ),
+        replacementKeys: Array.isArray(entry.keys)
+          ? entry.keys.map((key) => (key === "triggers" || key === "triggers[0]" ? key : "other"))
+          : [],
         differences: Array.isArray(entry.diffs)
           ? [...new Set(entry.diffs.map((key) => (typeof key === "string" && keys.includes(key) ? key : "other")))]
           : [],
+        details:
+          entry.detailedDiff && typeof entry.detailedDiff === "object" && !Array.isArray(entry.detailedDiff)
+            ? Object.entries(entry.detailedDiff)
+                .slice(0, 100)
+                .map(([key, raw]) => {
+                  const detail = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
+                  return {
+                    field: keys.includes(key)
+                      ? key
+                      : key === "triggers[0]"
+                        ? "triggers[0]"
+                        : key.startsWith("environment.") || key.startsWith("environment[")
+                          ? "environment-entry"
+                          : "other",
+                    kind:
+                      typeof detail.diffKind === "string" &&
+                      ["add", "delete", "update", "add-replace", "delete-replace", "update-replace"].includes(
+                        detail.diffKind,
+                      )
+                        ? detail.diffKind
+                        : "unknown",
+                    input: detail.inputDiff === true,
+                  }
+                })
+            : [],
       }
     }),
   }
 }
 
-function verify(value: unknown) {
+function diagnosticReason(value: unknown) {
+  try {
+    verify(value, false)
+    return "accepted-resource"
+  } catch (error) {
+    return error instanceof ConsoleUiDeploymentGuardError ? error.reason : "invalid-preview"
+  }
+}
+
+function builderReplacements(value: unknown[]) {
+  const entries = value.map(object)
+  const phases = entries.filter((entry) => entry.urn === builderUrn)
+  if (!phases.some((entry) => ["create-replacement", "delete-replaced"].includes(String(entry.op)))) return entries
+  if (phases.length !== 3 || phases.map((entry) => entry.op).join(",") !== "create-replacement,replace,delete-replaced")
+    reject("invalid-diff-metadata")
+  const [create, replace, remove] = phases
+  for (const phase of phases) fields(phase, eventFields)
+  if (!isDeepStrictEqual(omit(create, ["op", "logical"]), omit(replace, ["op", "logical"]))) reject("changed-state")
+  if (phases.some((entry) => entry.logical !== undefined && typeof entry.logical !== "boolean")) reject("invalid-entry")
+  if (remove.new != null || remove.type !== replace.type || remove.provider !== replace.provider)
+    reject("invalid-state")
+  const old = object(replace.old)
+  const removed = object(remove.old)
+  if (removed.delete !== undefined && typeof removed.delete !== "boolean") reject("invalid-state")
+  if (!isDeepStrictEqual(omit(old, ["delete"]), omit(removed, ["delete"]))) reject("changed-state")
+  metadata(remove, [])
+  // Only the existing, delete-command-free local builder has a three-step lifecycle.
+  // The retained replace event still passes all environment, command and trigger checks.
+  return entries.filter((entry) => entry !== create && entry !== remove)
+}
+
+function verify(value: unknown, complete = true) {
   if (!Array.isArray(value) || !value.length || value.length > 2_000) reject("invalid-preview")
   const seen = new Set<string>()
   const summary = { workerUpdates: 0, builderUpdates: 0, urlUpdates: 0 }
-  for (const raw of value) {
+  for (const raw of builderReplacements(value)) {
     const entry = object(raw)
     fields(entry, eventFields)
     const urn = entry.urn
@@ -424,7 +503,7 @@ function verify(value: unknown) {
       if (old.custom === true || next.custom === true) reject("invalid-state")
     }
   }
-  if (summary.workerUpdates !== 1) reject("incomplete-plan")
+  if (complete && summary.workerUpdates !== 1) reject("incomplete-plan")
   return summary
 }
 
