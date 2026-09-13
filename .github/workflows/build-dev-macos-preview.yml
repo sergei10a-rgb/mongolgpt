@@ -7,6 +7,10 @@ on:
         description: "BUILD DEV MACOS PREVIEW"
         required: true
         type: string
+      release_tag:
+        description: "Optional existing draft prerelease tag for this exact commit"
+        required: false
+        type: string
 
 concurrency:
   group: desktop-dev-macos-preview
@@ -87,6 +91,8 @@ jobs:
           cd "$RUNNER_TEMP/mongolgpt-macos-preview"
           shasum -a 256 *.dmg *.zip > SHA256SUMS.txt
           printf '%s\n' "MongolGPT macOS Dev Preview ($PREVIEW_ARCH)" "Version: $MONGOLGPT_VERSION" "Commit: $GITHUB_SHA" "" "Ad-hoc signed, NOT Developer ID signed or notarized. Not a production release." "macOS Gatekeeper may block this development preview." > README.txt
+          cp SHA256SUMS.txt "$RUNNER_TEMP/mongolgpt-macos-evidence/SHA256SUMS-$PREVIEW_ARCH.txt"
+          cp README.txt "$RUNNER_TEMP/mongolgpt-macos-evidence/README-$PREVIEW_ARCH.txt"
 
       - name: Upload macOS dev preview
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -104,3 +110,30 @@ jobs:
           path: ${{ runner.temp }}/mongolgpt-macos-evidence/*
           if-no-files-found: warn
           retention-days: 14
+
+  attach-to-draft:
+    if: inputs.release_tag != '' && github.repository == 'sergei10a-rgb/mongolgpt' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+    steps:
+      - name: Verify an existing draft prerelease for this exact source
+        run: |
+          test "$RELEASE_TAG" = "mongolgpt-v0.1.2-dev.${GITHUB_SHA:0:7}"
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,targetCommitish > release.json
+          jq -e --arg sha "$GITHUB_SHA" '.isDraft == true and .isPrerelease == true and .targetCommitish == $sha' release.json
+
+      - name: Download both verified macOS packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: mongolgpt-desktop-dev-macos-*-0.0.0-dev.${{ github.run_id }}.${{ github.run_attempt }}
+          path: .artifacts
+
+      - name: Attach packages without publishing the draft
+        run: gh release upload "$RELEASE_TAG" .artifacts/*/*.dmg .artifacts/*/*.zip --repo "$GITHUB_REPOSITORY"
