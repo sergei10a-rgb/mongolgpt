@@ -11,6 +11,7 @@ import { popularProviders, useProviders } from "@/hooks/use-providers"
 import { ModelTooltip } from "./model-tooltip"
 import { useLanguage } from "@/context/language"
 import { decode64 } from "@/utils/base64"
+import { isFreeModel } from "@/utils/free-model"
 
 type ModelState = ReturnType<typeof useLocal>["model"]
 
@@ -46,7 +47,11 @@ export const DialogSelectModelUnpaid: Component<{ model?: ModelState }> = (props
       class="overflow-y-auto [&_[data-slot=dialog-body]]:overflow-visible [&_[data-slot=dialog-body]]:flex-none"
     >
       <div class="flex flex-col gap-3 px-2.5" onKeyDown={handleKeyDown}>
-        <div class="text-14-medium text-text-base px-2.5">{language.t("dialog.model.unpaid.freeModels.title")}</div>
+        <div class="text-14-medium text-text-base px-2.5">
+          {language.t(
+            model.list().every(isFreeModel) ? "dialog.model.unpaid.freeModels.title" : "settings.models.title",
+          )}
+        </div>
         <List
           class="px-3 [&_[data-slot=list-scroll]]:overflow-visible"
           ref={(ref) => (listRef = ref)}
@@ -58,13 +63,7 @@ export const DialogSelectModelUnpaid: Component<{ model?: ModelState }> = (props
               class="w-full"
               placement="right-start"
               gutter={12}
-              value={
-                <ModelTooltip
-                  model={item}
-                  latest={item.latest}
-                  free={item.provider.id === "mongolgpt" && (!item.cost || item.cost.input === 0)}
-                />
-              }
+              value={<ModelTooltip model={item} latest={item.latest} free={isFreeModel(item)} />}
             >
               {node}
             </Tooltip>
@@ -79,7 +78,9 @@ export const DialogSelectModelUnpaid: Component<{ model?: ModelState }> = (props
           {(i) => (
             <div class="w-full flex items-center gap-x-2.5">
               <span>{i.name}</span>
-              <Tag>{language.t("model.tag.free")}</Tag>
+              <Show when={isFreeModel(i)}>
+                <Tag>{language.t("model.tag.free")}</Tag>
+              </Show>
               <Show when={i.latest}>
                 <Tag>{language.t("model.tag.latest")}</Tag>
               </Show>

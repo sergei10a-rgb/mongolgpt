@@ -13,9 +13,7 @@ import { Tooltip } from "@mongolgpt/ui/tooltip"
 import { ModelTooltip } from "./model-tooltip"
 import { useLanguage } from "@/context/language"
 import { decode64 } from "@/utils/base64"
-
-const isFree = (provider: string, cost: { input: number } | undefined) =>
-  provider === "mongolgpt" && (!cost || cost.input === 0)
+import { isFreeModel } from "@/utils/free-model"
 
 type ModelState = ReturnType<typeof useLocal>["model"]
 
@@ -60,7 +58,7 @@ const ModelList: Component<{
           placement="right-start"
           gutter={12}
           openDelay={0}
-          value={<ModelTooltip model={item} latest={item.latest} free={isFree(item.provider.id, item.cost)} />}
+          value={<ModelTooltip model={item} latest={item.latest} free={isFreeModel(item)} />}
         >
           {node}
         </Tooltip>
@@ -75,7 +73,7 @@ const ModelList: Component<{
       {(i) => (
         <div class="w-full flex items-center gap-x-2 text-13-regular">
           <span class="truncate">{i.name}</span>
-          <Show when={isFree(i.provider.id, i.cost)}>
+          <Show when={isFreeModel(i)}>
             <Tag>{language.t("model.tag.free")}</Tag>
           </Show>
           <Show when={i.latest}>
