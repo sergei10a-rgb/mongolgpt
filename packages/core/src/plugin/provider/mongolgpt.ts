@@ -187,6 +187,8 @@ export const MongolGPTPlugin = define<HttpClient.HttpClient | EventV2.Service | 
         })
 
         for (const [modelID, config] of Object.entries(item.models ?? {})) {
+          // Older account servers still advertise the retired synthetic route.
+          if (providerID === "mongolgpt" && modelID === "free-auto") continue
           catalog.model.update(providerID, modelID, (model) => {
             if (config.family !== undefined) model.family = config.family
             if (config.name !== undefined) model.name = config.name

@@ -206,6 +206,14 @@ describe("MongolGPTPlugin", () => {
                           limit: { context: 1000, output: 100 },
                         },
                         disabled: { name: "Disabled", status: "deprecated" },
+                        "free-auto": { name: "User-configured auto" },
+                      },
+                    },
+                    mongolgpt: {
+                      name: "MongolGPT",
+                      models: {
+                        "free-auto": { name: "MongolGPT Free Auto" },
+                        "nvidia-nim-byok": { name: "NVIDIA NIM" },
                       },
                     },
                   },
@@ -274,6 +282,9 @@ describe("MongolGPTPlugin", () => {
             required(yield* catalog.model.get(ProviderV2.ID.make("remote"), ModelV2.ID.make("disabled"))).enabled,
           ).toBe(false)
           expect(yield* catalog.model.get(ProviderV2.ID.make("remote"), ModelV2.ID.make("stale"))).toBeDefined()
+          expect(yield* catalog.model.get(ProviderV2.ID.make("remote"), ModelV2.ID.make("free-auto"))).toBeDefined()
+          expect(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("free-auto"))).toBeUndefined()
+          expect(yield* catalog.model.get(ProviderV2.ID.mongolgpt, ModelV2.ID.make("nvidia-nim-byok"))).toBeDefined()
           expect(authorization).toContain("Bearer secret")
         }),
       ({ server }) => Effect.promise(() => server.stop(true)),

@@ -155,7 +155,10 @@ describe("plugin dependency directories", () => {
 })
 const configIt = (options?: Parameters<typeof configLayer>[0]) => testEffect(configLayer(options))
 
-const schemaConfig = (config: object) => ({ $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json", ...config })
+const schemaConfig = (config: object) => ({
+  $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json",
+  ...config,
+})
 
 const provideCurrentInstance = <A, E, R>(effect: Effect.Effect<A, E, R>, ctx: InstanceContext) =>
   effect.pipe(Effect.provideService(InstanceRef, ctx))
@@ -408,7 +411,10 @@ it.instance("updates config and preserves empty shell sentinel", () =>
     const test = yield* TestInstance
     yield* writeConfigEffect(
       test.directory,
-      { $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json", shell: "bash" },
+      {
+        $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json",
+        shell: "bash",
+      },
       "config.json",
     )
 
@@ -631,7 +637,15 @@ const accountTokenIt = configIt({
     config: () =>
       Effect.succeed(
         Option.some({
-          provider: { mongolgpt: { options: { apiKey: "{env:MONGOLGPT_CONSOLE_TOKEN}" } } },
+          provider: {
+            mongolgpt: {
+              options: { apiKey: "{env:MONGOLGPT_CONSOLE_TOKEN}" },
+              models: {
+                "free-auto": { name: "MongolGPT Free Auto" },
+                "nvidia-nim-byok": { name: "NVIDIA NIM" },
+              },
+            },
+          },
         }),
       ),
     token: () => Effect.succeed(Option.some(AccessToken.make("st_test_token"))),
@@ -642,6 +656,15 @@ accountTokenIt.instance("resolves env templates in account config with account t
   Effect.gen(function* () {
     const config = yield* Config.use.get()
     expect(config.provider?.["mongolgpt"]?.options?.apiKey).toBe("st_test_token")
+  }),
+)
+
+accountTokenIt.instance("does not reintroduce Free Auto from an older account server", () =>
+  Effect.gen(function* () {
+    const config = yield* Config.use.get()
+    expect(config.provider?.mongolgpt?.models?.["free-auto"]).toBeUndefined()
+    expect(config.provider?.mongolgpt?.models?.["nvidia-nim-byok"]?.name).toBe("NVIDIA NIM")
+    expect((yield* Config.use.getConsoleState()).consoleManagedProviders).toContain("mongolgpt")
   }),
 )
 
@@ -2099,10 +2122,16 @@ test("parseManagedPlist handles empty config", async () => {
   const config = ConfigParse.schema(
     ConfigV1.Info,
     ConfigParse.jsonc(
-      await ConfigManaged.parseManagedPlist(JSON.stringify({ $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json" })),
+      await ConfigManaged.parseManagedPlist(
+        JSON.stringify({
+          $schema: "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json",
+        }),
+      ),
       "test:mobileconfig",
     ),
     "test:mobileconfig",
   )
-  expect(config.$schema).toBe("https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json")
+  expect(config.$schema).toBe(
+    "https://raw.githubusercontent.com/sergei10a-rgb/mongolgpt/main/packages/web/public/config.json",
+  )
 })

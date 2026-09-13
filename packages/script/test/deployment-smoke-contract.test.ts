@@ -24,8 +24,8 @@ import {
   inspectDeploymentEndpointConfiguration,
   inspectDocsRootRedirect,
   inspectAuthenticatedAccountOverview,
-  inspectAuthenticatedFreeAutoResponse,
-  inspectAuthenticatedFreeAutoProvider,
+  inspectAuthenticatedNativeFreeResponse,
+  inspectAuthenticatedNativeFreeProvider,
   inspectAuthenticatedRuntimeProjects,
   inspectAuthenticatedRuntimeSession,
   inspectAuthenticatedRuntimeSessionCreate,
@@ -491,6 +491,12 @@ describe("dev runtime-only smoke", () => {
         url.pathname === "/session" ||
         url.pathname.endsWith("/message")
       ) {
+        if (url.pathname.endsWith("/message")) {
+          expect(await request.json()).toEqual({
+            model: { providerID: "mongolgpt", modelID: "big-pickle" },
+            parts: [{ type: "text", text: "MONGOLGPT_ANONYMOUS_SMOKE" }],
+          })
+        }
         return Response.json(
           url.pathname === "/auth/session" ? { authenticated: false } : { error: "Нэвтэрч орно уу." },
           {
@@ -843,13 +849,72 @@ const authenticatedProviders = {
     {
       id: "mongolgpt",
       name: "MongolGPT",
+      source: "api",
+      env: ["MONGOLGPT_API_KEY"],
+      options: {},
       models: {
-        "free-auto": { id: "free-auto", name: "MongolGPT Free Auto" },
+        "free-auto": legacyModel("free-auto", "MongolGPT Free Auto", { apiID: "free-auto" }),
+        "openrouter-byok": legacyModel("openrouter-byok", "OpenRouter (өөрийн түлхүүр)"),
+        "nvidia-nim-byok": legacyModel("nvidia-nim-byok", "NVIDIA NIM (өөрийн түлхүүр)"),
+        "paid-current": legacyModel("paid-current", "Paid Current", { cost: { input: 1, output: 1 } }),
+        "big-pickle": legacyModel("big-pickle", "Big Pickle"),
       },
     },
   ],
-  default: { mongolgpt: "free-auto" },
+  default: { mongolgpt: "big-pickle" },
   connected: ["mongolgpt"],
+}
+
+function legacyModel(
+  id: string,
+  name: string,
+  overrides: {
+    apiID?: string
+    apiURL?: string
+    cost?: {
+      input: number
+      output: number
+      cache?: { read: number; write: number }
+      tiers?: Array<{ input: number; output: number; cache: { read: number; write: number } }>
+      experimentalOver200K?: { input: number; output: number; cache: { read: number; write: number } }
+    }
+    status?: "active" | "alpha" | "beta" | "deprecated"
+  } = {},
+) {
+  return {
+    id,
+    providerID: "mongolgpt",
+    api: {
+      id: overrides.apiID ?? id,
+      url: overrides.apiURL ?? "https://opencode.ai/zen/v1",
+      npm: "@ai-sdk/openai-compatible",
+    },
+    name,
+    family: "gpt-5",
+    capabilities: {
+      temperature: true,
+      reasoning: true,
+      attachment: false,
+      toolcall: true,
+      input: { text: true, audio: false, image: false, video: false, pdf: false },
+      output: { text: true, audio: false, image: false, video: false, pdf: false },
+      interleaved: false,
+    },
+    cost: {
+      input: overrides.cost?.input ?? 0,
+      output: overrides.cost?.output ?? 0,
+      cache: overrides.cost?.cache ?? { read: 0, write: 0 },
+      ...(overrides.cost?.tiers
+        ? { tiers: overrides.cost.tiers.map((tier) => ({ ...tier, tier: { type: "context", size: 200_000 } })) }
+        : {}),
+      ...(overrides.cost?.experimentalOver200K ? { experimentalOver200K: overrides.cost.experimentalOver200K } : {}),
+    },
+    limit: { context: 128_000, output: 16_384 },
+    status: overrides.status ?? "active",
+    options: {},
+    headers: {},
+    release_date: "2026-01-01",
+  }
 }
 
 describe("inspectAppHtml", () => {
@@ -1361,7 +1426,7 @@ describe("hosted account overview smoke contract", () => {
   })
 })
 
-describe("authenticated hosted Free Auto smoke contract", () => {
+describe("authenticated hosted native free model smoke contract", () => {
   const now = 1_800_000_000_000
   const expiresAt = now + 90_000
   const token = "runtime.header.signature"
@@ -1443,32 +1508,146 @@ describe("authenticated hosted Free Auto smoke contract", () => {
     ).toThrow("does not match")
   })
 
-  test("requires a real project API array and the rebranded Free Auto provider", () => {
+  test("requires a real project API array and a native OpenCode zero-cost provider model", () => {
     expect(inspectAuthenticatedRuntimeProjects([])).toBe(0)
     expect(inspectAuthenticatedRuntimeProjects([{ id: "project_smoke" }])).toBe(1)
     expect(() => inspectAuthenticatedRuntimeProjects("<!doctype html>")).toThrow("not an array")
-    expect(inspectAuthenticatedFreeAutoProvider(authenticatedProviders)).toEqual({
+    expect(inspectAuthenticatedNativeFreeProvider(authenticatedProviders)).toEqual({
       providerID: "mongolgpt",
-      modelID: "free-auto",
+      modelID: "big-pickle",
     })
     expect(() =>
-      inspectAuthenticatedFreeAutoProvider({
+      inspectAuthenticatedNativeFreeProvider({
         ...authenticatedProviders,
         all: [{ id: "opencode", name: "OpenCode", models: {} }],
       }),
     ).toThrow("legacy")
     expect(() =>
-      inspectAuthenticatedFreeAutoProvider({
+      inspectAuthenticatedNativeFreeProvider({
         ...authenticatedProviders,
         all: [{ id: "mongolgpt", name: "MongolGPT", models: {} }],
       }),
-    ).toThrow("Free Auto")
-    expect(() => inspectAuthenticatedFreeAutoProvider({ ...authenticatedProviders, connected: [] })).toThrow(
+    ).toThrow("native OpenCode free model")
+    expect(() => inspectAuthenticatedNativeFreeProvider({ ...authenticatedProviders, connected: [] })).toThrow(
       "not connected",
     )
+    expect(() =>
+      inspectAuthenticatedNativeFreeProvider({
+        ...authenticatedProviders,
+        all: [
+          {
+            id: "mongolgpt",
+            name: "MongolGPT",
+            models: {
+              "free-auto": authenticatedProviders.all[0].models["free-auto"],
+              "openrouter-byok": authenticatedProviders.all[0].models["openrouter-byok"],
+              "nvidia-nim-byok": authenticatedProviders.all[0].models["nvidia-nim-byok"],
+            },
+          },
+        ],
+      }),
+    ).toThrow("native OpenCode free model")
+    expect(() =>
+      inspectAuthenticatedNativeFreeProvider({
+        ...authenticatedProviders,
+        all: [
+          {
+            id: "mongolgpt",
+            name: "MongolGPT",
+            models: {
+              paid: legacyModel("paid", "Paid", { cost: { input: 0.01, output: 0.02 } }),
+            },
+          },
+        ],
+      }),
+    ).toThrow("native OpenCode free model")
+    expect(() =>
+      inspectAuthenticatedNativeFreeProvider({
+        ...authenticatedProviders,
+        all: [
+          {
+            id: "mongolgpt",
+            name: "MongolGPT",
+            models: {
+              "paid-cache": legacyModel("paid-cache", "Paid Cache", {
+                cost: { input: 0, output: 0, cache: { read: 0.01, write: 0 } },
+              }),
+            },
+          },
+        ],
+      }),
+    ).toThrow("native OpenCode free model")
+    expect(() =>
+      inspectAuthenticatedNativeFreeProvider({
+        ...authenticatedProviders,
+        all: [
+          {
+            id: "mongolgpt",
+            name: "MongolGPT",
+            models: {
+              "paid-tier": legacyModel("paid-tier", "Paid Tier", {
+                cost: {
+                  input: 0,
+                  output: 0,
+                  tiers: [{ input: 0, output: 0, cache: { read: 0, write: 0.01 } }],
+                },
+              }),
+            },
+          },
+        ],
+      }),
+    ).toThrow("native OpenCode free model")
+    expect(() =>
+      inspectAuthenticatedNativeFreeProvider({
+        ...authenticatedProviders,
+        all: [
+          {
+            id: "mongolgpt",
+            name: "MongolGPT",
+            models: {
+              "paid-long-context": legacyModel("paid-long-context", "Paid Long Context", {
+                cost: {
+                  input: 0,
+                  output: 0,
+                  experimentalOver200K: { input: 0, output: 0.01, cache: { read: 0, write: 0 } },
+                },
+              }),
+            },
+          },
+        ],
+      }),
+    ).toThrow("native OpenCode free model")
+    expect(() =>
+      inspectAuthenticatedNativeFreeProvider({
+        ...authenticatedProviders,
+        all: [
+          {
+            id: "mongolgpt",
+            name: "MongolGPT",
+            models: {
+              "wrong-route": legacyModel("wrong-route", "Wrong Route", { apiURL: "https://example.com/zen/v1" }),
+            },
+          },
+        ],
+      }),
+    ).toThrow("native OpenCode free model")
+    expect(() =>
+      inspectAuthenticatedNativeFreeProvider({
+        ...authenticatedProviders,
+        all: [
+          {
+            id: "mongolgpt",
+            name: "MongolGPT",
+            models: {
+              "wrong-api-id": legacyModel("wrong-api-id", "Wrong API ID", { apiID: "upstream-id" }),
+            },
+          },
+        ],
+      }),
+    ).toThrow("native OpenCode free model")
   })
 
-  test("requires a real isolated session and an authenticated Free Auto model response", () => {
+  test("requires a real isolated session and an authenticated native free model response", () => {
     expect(inspectAuthenticatedRuntimeSessionCreate({ id: "ses_smoke", directory: "/workspace" })).toEqual({
       sessionID: "ses_smoke",
     })
@@ -1482,7 +1661,7 @@ describe("authenticated hosted Free Auto smoke contract", () => {
         sessionID: "ses_smoke",
         role: "assistant",
         providerID: "mongolgpt",
-        modelID: "free-auto",
+        modelID: "big-pickle",
         time: { created: 1, completed: 2 },
         cost: 0,
         tokens: { input: 8, output: 2, reasoning: 0, cache: { read: 0, write: 0 } },
@@ -1498,27 +1677,37 @@ describe("authenticated hosted Free Auto smoke contract", () => {
         },
       ],
     }
-    expect(inspectAuthenticatedFreeAutoResponse(response, "ses_smoke")).toEqual({
+    expect(inspectAuthenticatedNativeFreeResponse(response, "ses_smoke", "big-pickle")).toEqual({
       providerID: "mongolgpt",
-      modelID: "free-auto",
+      modelID: "big-pickle",
       output: "MONGOLGPT_SMOKE_READY",
     })
     expect(() =>
-      inspectAuthenticatedFreeAutoResponse(
+      inspectAuthenticatedNativeFreeResponse(
         { ...response, info: { ...response.info, providerID: "opencode" } },
         "ses_smoke",
+        "big-pickle",
       ),
     ).toThrow("identity")
     expect(() =>
-      inspectAuthenticatedFreeAutoResponse(
+      inspectAuthenticatedNativeFreeResponse(
         { ...response, parts: [{ ...response.parts[0], text: "өөр хариу" }] },
         "ses_smoke",
+        "big-pickle",
       ),
     ).toThrow("smoke marker")
     expect(() =>
-      inspectAuthenticatedFreeAutoResponse(
+      inspectAuthenticatedNativeFreeResponse(
         { ...response, info: { ...response.info, tokens: { ...response.info.tokens, output: 0 } } },
         "ses_smoke",
+        "big-pickle",
+      ),
+    ).toThrow("usage evidence")
+    expect(() =>
+      inspectAuthenticatedNativeFreeResponse(
+        { ...response, info: { ...response.info, cost: 0.01 } },
+        "ses_smoke",
+        "big-pickle",
       ),
     ).toThrow("usage evidence")
   })

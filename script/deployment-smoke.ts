@@ -8,8 +8,8 @@ import {
 import {
   inspectAdminProtection,
   inspectAuthenticatedAccountOverview,
-  inspectAuthenticatedFreeAutoResponse,
-  inspectAuthenticatedFreeAutoProvider,
+  inspectAuthenticatedNativeFreeResponse,
+  inspectAuthenticatedNativeFreeProvider,
   inspectAuthenticatedRuntimeProjects,
   inspectAuthenticatedRuntimeSessionCreate,
   inspectAuthenticatedRuntimeSession,
@@ -166,7 +166,9 @@ export async function runRuntimeSmoke(stage = process.env.SST_STAGE ?? "dev") {
   await check("runtimeHealth", endpoints.runtimeHealth, "runtime", result, endpoints.app, runtimeVersion)
   await checkHostedSessionBoundary(runtimeOrigin, endpoints.app)
   await checkAnonymousRuntimeApiBoundary(runtimeOrigin, endpoints.app)
-  console.log("Dev runtime-only smoke check passed. Authenticated account болон Free Auto урсгалыг full smoke шалгана.")
+  console.log(
+    "Dev runtime-only smoke check passed. Authenticated account болон native free model урсгалыг full smoke шалгана.",
+  )
 }
 
 export async function runAuthBootstrapSmoke(stage = process.env.SST_STAGE ?? "dev") {
@@ -1200,11 +1202,11 @@ async function checkAnonymousRuntimeApiBoundary(serverUrl: string, appUrl: strin
       body: JSON.stringify({ title: "MongolGPT anonymous deployment smoke" }),
     },
     {
-      label: "Free Auto message API",
+      label: "native free model message API",
       path: "/session/mongolgpt-anonymous-smoke/message",
       method: "POST",
       body: JSON.stringify({
-        model: { providerID: "mongolgpt", modelID: "free-auto" },
+        model: { providerID: "mongolgpt", modelID: "big-pickle" },
         parts: [{ type: "text", text: "MONGOLGPT_ANONYMOUS_SMOKE" }],
       }),
     },
@@ -1270,7 +1272,7 @@ async function checkAuthenticatedHostedFlow(input: {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await authenticatedHostedFlow(input)
-      console.log("OK authenticated account, hosted runtime, and Free Auto")
+      console.log("OK authenticated account, hosted runtime, and native free model")
       return
     } catch (error) {
       lastError = error
@@ -1332,7 +1334,7 @@ async function authenticatedHostedFlow(input: {
 
   const providerUrl = new URL("/provider", `${input.runtimeUrl}/`)
   const providerResponse = await authenticatedFetch(providerUrl, appOrigin, { headers: runtimeHeaders })
-  inspectAuthenticatedFreeAutoProvider(
+  const nativeFreeModel = inspectAuthenticatedNativeFreeProvider(
     await authenticatedJson(providerResponse, appOrigin, "authenticated runtime provider response"),
   )
 
@@ -1363,14 +1365,15 @@ async function authenticatedHostedFlow(input: {
       method: "POST",
       headers: { ...modelHeaders, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: { providerID: "mongolgpt", modelID: "free-auto" },
+        model: nativeFreeModel,
         parts: [{ type: "text", text: "Зөвхөн MONGOLGPT_SMOKE_READY гэж хариул." }],
       }),
       timeout: 60_000,
     })
-    inspectAuthenticatedFreeAutoResponse(
-      await authenticatedJson(promptResponse, appOrigin, "authenticated Free Auto response"),
+    inspectAuthenticatedNativeFreeResponse(
+      await authenticatedJson(promptResponse, appOrigin, "authenticated native free model response"),
       created.sessionID,
+      nativeFreeModel.modelID,
     )
   })().then(
     () => ({ ok: true as const }),

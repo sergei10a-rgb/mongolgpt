@@ -22,19 +22,6 @@ export function createAccountConfig(input: { origin: string; workspaceID: string
           headers: { "x-org-id": input.workspaceID },
         },
         models: {
-          "free-auto": {
-            id: "free-auto",
-            name: "MongolGPT Free Auto",
-            family: "auto",
-            attachment: false,
-            reasoning: true,
-            temperature: true,
-            tool_call: true,
-            cost: { input: 0, output: 0 },
-            limit: { context: 128_000, output: 16_384 },
-            modalities: { input: ["text"], output: ["text"] },
-            status: "active",
-          },
           "openrouter-byok": {
             id: "openrouter-byok",
             name: "OpenRouter (өөрийн түлхүүр)",

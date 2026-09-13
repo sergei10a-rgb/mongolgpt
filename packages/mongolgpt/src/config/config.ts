@@ -232,7 +232,9 @@ export const layer = Layer.effect(
           HttpClientRequest.get(url).pipe(HttpClientRequest.acceptJson, HttpClientRequest.setHeaders(headers ?? {})),
         )
         .pipe(
-          Effect.catch((error) => Effect.die(new Error(`Алсын тохиргоог ${url}-ээс татаж чадсангүй: ${String(error)}`))),
+          Effect.catch((error) =>
+            Effect.die(new Error(`Алсын тохиргоог ${url}-ээс татаж чадсангүй: ${String(error)}`)),
+          ),
         )
       const body = yield* response.text.pipe(
         Effect.catch((error) => Effect.die(new Error(`Алсын тохиргоог ${url}-ээс уншиж чадсангүй: ${String(error)}`))),
@@ -320,7 +322,9 @@ export const layer = Layer.effect(
     const [cachedGlobal, invalidateGlobal] = yield* Effect.cachedInvalidateWithTTL(
       loadGlobal().pipe(
         Effect.tapError((error) =>
-          Effect.logError("Үндсэн тохиргоог ачаалж чадсангүй, өгөгдмөл тохиргоог ашиглаж байна", { error: String(error) }),
+          Effect.logError("Үндсэн тохиргоог ачаалж чадсангүй, өгөгдмөл тохиргоог ашиглаж байна", {
+            error: String(error),
+          }),
         ),
         Effect.orElseSucceed((): Info => ({})),
       ),
@@ -526,6 +530,8 @@ export const layer = Layer.effect(
                 dir: path.dirname(source),
                 source,
               })
+              // Do not restore the retired synthetic route from an older account server.
+              delete next.provider?.mongolgpt?.models?.["free-auto"]
               for (const providerID of Object.keys(next.provider ?? {})) {
                 consoleManagedProviders.add(providerID)
               }

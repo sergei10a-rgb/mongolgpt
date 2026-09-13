@@ -52,7 +52,7 @@ export function rebrandHostedProviders(providers: Record<string, Provider>, cons
               ...model,
               provider: {
                 ...model.provider,
-                ...(model.provider?.npm ?? upstream?.npm ? { npm: model.provider?.npm ?? upstream?.npm } : {}),
+                ...((model.provider?.npm ?? upstream?.npm) ? { npm: model.provider?.npm ?? upstream?.npm } : {}),
                 api: upstream?.api,
               },
             },
@@ -69,8 +69,7 @@ export function rebrandHostedProviders(providers: Record<string, Provider>, cons
     env: ["MONGOLGPT_API_KEY"],
     models: {
       ...upstreamFreeModels,
-      ...hosted?.models,
-      "free-auto": freeAutoModel,
+      ...Object.fromEntries(Object.entries(hosted?.models ?? {}).filter(([id]) => id !== "free-auto")),
     },
   }
   delete result.opencode
@@ -178,20 +177,6 @@ export const Provider = Schema.Struct({
 })
 
 export type Provider = Schema.Schema.Type<typeof Provider>
-
-const freeAutoModel = {
-  id: "free-auto",
-  name: "MongolGPT Free Auto",
-  family: "auto",
-  release_date: "2026-08-27",
-  attachment: false,
-  reasoning: true,
-  temperature: true,
-  tool_call: true,
-  cost: { input: 0, output: 0 },
-  limit: { context: 128_000, output: 16_384 },
-  modalities: { input: ["text"], output: ["text"] },
-} satisfies Model
 
 export const Event = ModelsDev.Event
 

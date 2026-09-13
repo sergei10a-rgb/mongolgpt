@@ -194,14 +194,9 @@ describe("ModelsDev Service", () => {
               api: "https://opencode.ai/zen/v1",
             },
           },
-          "free-auto": {
-            id: "free-auto",
-            name: "MongolGPT Free Auto",
-            cost: { input: 0, output: 0 },
-            limit: { context: 128_000, output: 16_384 },
-          },
         },
       })
+      expect(Object.keys(result.mongolgpt.models)).toEqual([free.id])
       expect(result.mongolgpt.models["paid-current"]).toBeUndefined()
       expect(result.mongolgpt.models["free-retired"]).toBeUndefined()
       expect(result.mongolgpt.models["acme-1"]).toBeUndefined()
@@ -209,13 +204,13 @@ describe("ModelsDev Service", () => {
     }),
   )
 
-  it.live("synthesizes the first-party Free Auto provider without an inherited hosted catalog", () =>
+  it.live("does not invent a free model when the upstream catalog is unavailable", () =>
     Effect.sync(() => {
       const result = ModelsDev.rebrandHostedProviders(fixture, "https://dev.mgpt.mn")
 
       expect(result.mongolgpt.api).toBe("https://dev.mgpt.mn/gateway/v1")
       expect(result.mongolgpt.npm).toBe("@ai-sdk/openai-compatible")
-      expect(result.mongolgpt.models["free-auto"]?.tool_call).toBe(true)
+      expect(result.mongolgpt.models).toEqual({})
     }),
   )
 
@@ -241,7 +236,48 @@ describe("ModelsDev Service", () => {
       )
 
       expect(result.mongolgpt.models[free.id]).toBeUndefined()
-      expect(result.mongolgpt.models["free-auto"]).toBeDefined()
+      expect(result.mongolgpt.models).toEqual({})
+    }),
+  )
+
+  it.live("drops the legacy synthetic catalog entry without changing native models or BYOK", () =>
+    Effect.sync(() => {
+      const model = fixture.acme.models["acme-1"]
+      const source = {
+        mongolgpt: {
+          ...fixture.acme,
+          id: "mongolgpt",
+          models: {
+            "free-auto": { ...model, id: "free-auto", cost: { input: 0, output: 0 } },
+            "nvidia-nim-byok": { ...model, id: "nvidia-nim-byok" },
+          },
+        },
+        opencode: {
+          ...fixture.acme,
+          id: "opencode",
+          api: "https://opencode.ai/zen/v1",
+          models: { native: { ...model, id: "native", cost: { input: 0, output: 0 } } },
+        },
+      }
+      const result = ModelsDev.rebrandHostedProviders(source)
+      expect(Object.keys(result.mongolgpt.models)).toEqual(["native", "nvidia-nim-byok"])
+      expect(result.mongolgpt.models.native).toMatchObject({
+        id: "native",
+        name: model.name,
+        provider: { api: source.opencode.api },
+      })
+      expect(result.mongolgpt.models["nvidia-nim-byok"]).toEqual(source.mongolgpt.models["nvidia-nim-byok"])
+      expect(source.mongolgpt.models["free-auto"]).toBeDefined()
+
+      const refreshed = ModelsDev.rebrandHostedProviders({
+        ...source,
+        opencode: {
+          ...source.opencode,
+          models: { newer: { ...model, id: "newer", cost: { input: 0, output: 0 } } },
+        },
+      })
+      expect(Object.keys(refreshed.mongolgpt.models)).toEqual(["newer", "nvidia-nim-byok"])
+      expect(refreshed.mongolgpt.models.native).toBeUndefined()
     }),
   )
 

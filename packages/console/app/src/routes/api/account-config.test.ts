@@ -2,21 +2,20 @@ import { describe, expect, test } from "bun:test"
 import { createAccountConfig, selectAccountWorkspace } from "./account-config"
 
 describe("account-scoped MongolGPT config", () => {
-  test("wires Free Auto to the current console and selected workspace", () => {
+  test("wires BYOK models to the current console and selected workspace", () => {
     const config = createAccountConfig({ origin: "https://mgpt.mn", workspaceID: "workspace-1" })
     const provider = config.provider.mongolgpt
 
+    expect(provider.id).toBe("mongolgpt")
+    expect(provider.name).toBe("MongolGPT")
     expect(provider.api).toBe("https://mgpt.mn/gateway/v1")
     expect(provider.options).toEqual({
       apiKey: "{env:MONGOLGPT_CONSOLE_TOKEN}",
       baseURL: "https://mgpt.mn/gateway/v1",
       headers: { "x-org-id": "workspace-1" },
     })
-    expect(provider.models["free-auto"]).toMatchObject({
-      name: "MongolGPT Free Auto",
-      cost: { input: 0, output: 0 },
-      tool_call: true,
-    })
+    expect(provider.env).toEqual(["MONGOLGPT_CONSOLE_TOKEN"])
+    expect(provider.models).not.toHaveProperty("free-auto")
     expect(provider.models["openrouter-byok"]).toMatchObject({
       name: "OpenRouter (өөрийн түлхүүр)",
       cost: { input: 0, output: 0 },

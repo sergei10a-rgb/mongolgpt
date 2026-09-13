@@ -640,7 +640,7 @@ export function inspectAuthenticatedRuntimeProjects(value: unknown) {
   return value.length
 }
 
-export function inspectAuthenticatedFreeAutoProvider(value: unknown) {
+export function inspectAuthenticatedNativeFreeProvider(value: unknown) {
   const body = record(value, "authenticated runtime provider response")
   exactObjectKeys(body, ["all", "connected", "default"], "authenticated runtime provider response")
   if (!Array.isArray(body.all) || !Array.isArray(body.connected)) {
@@ -660,11 +660,11 @@ export function inspectAuthenticatedFreeAutoProvider(value: unknown) {
     throw new Error("authenticated runtime provider response has no MongolGPT provider")
   }
   const models = record(provider.models, "authenticated MongolGPT provider models")
-  const freeAuto = record(models["free-auto"], "authenticated Free Auto model")
-  if (freeAuto.id !== "free-auto" || freeAuto.name !== "MongolGPT Free Auto") {
-    throw new Error("authenticated runtime provider response has no Free Auto model")
-  }
-  return { providerID: "mongolgpt" as const, modelID: "free-auto" as const }
+  const selected = Object.entries(models)
+    .map(([id, model]) => ({ id, model: record(model, "authenticated native OpenCode free model") }))
+    .find(({ id, model }) => isNativeOpenCodeFreeModel(id, model))
+  if (!selected) throw new Error("authenticated runtime provider response has no native OpenCode free model")
+  return { providerID: "mongolgpt" as const, modelID: selected.id }
 }
 
 export function inspectAuthenticatedRuntimeSessionCreate(value: unknown) {
@@ -678,21 +678,21 @@ export function inspectAuthenticatedRuntimeSessionCreate(value: unknown) {
   return { sessionID: session.id }
 }
 
-export function inspectAuthenticatedFreeAutoResponse(value: unknown, sessionID: string) {
-  const response = record(value, "authenticated Free Auto response")
-  exactObjectKeys(response, ["info", "parts"], "authenticated Free Auto response")
-  const info = record(response.info, "authenticated Free Auto response info")
+export function inspectAuthenticatedNativeFreeResponse(value: unknown, sessionID: string, modelID: string) {
+  const response = record(value, "authenticated native OpenCode free response")
+  exactObjectKeys(response, ["info", "parts"], "authenticated native OpenCode free response")
+  const info = record(response.info, "authenticated native OpenCode free response info")
   if (
     info.sessionID !== sessionID ||
     info.role !== "assistant" ||
     info.providerID !== "mongolgpt" ||
-    info.modelID !== "free-auto" ||
+    info.modelID !== modelID ||
     info.error !== undefined
   ) {
-    throw new Error("authenticated Free Auto response identity is invalid")
+    throw new Error("authenticated native OpenCode free response identity is invalid")
   }
-  const time = record(info.time, "authenticated Free Auto response time")
-  const tokens = record(info.tokens, "authenticated Free Auto response usage")
+  const time = record(info.time, "authenticated native OpenCode free response time")
+  const tokens = record(info.tokens, "authenticated native OpenCode free response usage")
   if (
     typeof time.completed !== "number" ||
     !Number.isFinite(time.completed) ||
@@ -700,14 +700,14 @@ export function inspectAuthenticatedFreeAutoResponse(value: unknown, sessionID: 
     !info.finish.trim() ||
     typeof info.cost !== "number" ||
     !Number.isFinite(info.cost) ||
-    info.cost < 0 ||
+    info.cost !== 0 ||
     typeof tokens.output !== "number" ||
     !Number.isInteger(tokens.output) ||
     tokens.output < 1
   ) {
-    throw new Error("authenticated Free Auto response has no completed usage evidence")
+    throw new Error("authenticated native OpenCode free response has no completed usage evidence")
   }
-  if (!Array.isArray(response.parts)) throw new Error("authenticated Free Auto response parts are invalid")
+  if (!Array.isArray(response.parts)) throw new Error("authenticated native OpenCode free response parts are invalid")
   const output = response.parts
     .filter(
       (part): part is Record<string, unknown> => typeof part === "object" && part !== null && !Array.isArray(part),
@@ -717,9 +717,48 @@ export function inspectAuthenticatedFreeAutoResponse(value: unknown, sessionID: 
     .join("\n")
     .trim()
   if (!output.includes("MONGOLGPT_SMOKE_READY")) {
-    throw new Error("authenticated Free Auto response did not contain the smoke marker")
+    throw new Error("authenticated native OpenCode free response did not contain the smoke marker")
   }
-  return { providerID: "mongolgpt" as const, modelID: "free-auto" as const, output }
+  return { providerID: "mongolgpt" as const, modelID, output }
+}
+
+function isNativeOpenCodeFreeModel(id: string, model: Record<string, unknown>) {
+  if (id === "free-auto" || id === "openrouter-byok" || id === "nvidia-nim-byok") return false
+  if (model.id !== id) return false
+  if (model.status === "deprecated" || model.status === "alpha") return false
+  if (!isZeroCost(model.cost)) return false
+  if (typeof model.api !== "object" || model.api === null || Array.isArray(model.api)) return false
+  const api = model.api as Record<string, unknown>
+  return api.id === id && isOpenCodePublicApi(typeof api.url === "string" ? api.url : undefined)
+}
+
+function isOpenCodePublicApi(value: string | undefined) {
+  if (!value) return false
+  try {
+    const url = new URL(value)
+    return url.protocol === "https:" && url.hostname === "opencode.ai" && /^\/zen(?:\/|$)/.test(url.pathname)
+  } catch {
+    return false
+  }
+}
+
+function isZeroCost(value: unknown): boolean {
+  if (!isCost(value)) return false
+  if (value.experimentalOver200K !== undefined && !isZeroCost(value.experimentalOver200K)) return false
+  if (value.tiers !== undefined) {
+    if (!Array.isArray(value.tiers)) return false
+    if (value.tiers.some((tier) => !isZeroCost(tier))) return false
+  }
+  return true
+}
+
+function isCost(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false
+  const cost = value as Record<string, unknown>
+  if (cost.input !== 0 || cost.output !== 0) return false
+  if (typeof cost.cache !== "object" || cost.cache === null || Array.isArray(cost.cache)) return false
+  const cache = cost.cache as Record<string, unknown>
+  return cache.read === 0 && cache.write === 0
 }
 
 function record(value: unknown, label: string): Record<string, unknown> {
