@@ -71,6 +71,7 @@ export async function previewRequest(request: Request, env: PreviewEnvironment, 
     "Upgrade",
     "Sec-WebSocket-Protocol",
     "x-mongolgpt-directory",
+    "x-mongolgpt-ticket",
     "x-mongolgpt-runtime-read-retry",
   ]) {
     const value = request.headers.get(name)

@@ -120,6 +120,47 @@ describe("owner preview boundary", () => {
       expect(upstream.headers.get(name)).toBeNull()
     }
   })
+  test("preserves the native PTY ticket marker without synthesizing or changing it", async () => {
+    const assertion = await token()
+    for (const marker of [undefined, "1", "invalid"]) {
+      const current = environment()
+      const headers = new Headers({ "Cf-Access-Jwt-Assertion": assertion, Origin: origin })
+      if (marker !== undefined) headers.set("x-mongolgpt-ticket", marker)
+      const response = await previewRequest(
+        new Request(origin + "/pty/fixture/connect-token?directory=%2Fworkspace", { method: "POST", headers }),
+        current.env,
+        resolver,
+      )
+      expect(response.status).toBe(200)
+      expect(current.seen).toHaveLength(1)
+      expect(current.seen[0].headers.get("x-mongolgpt-ticket")).toBe(marker ?? null)
+      expect(current.seen[0].headers.get("Origin")).toBe("https://app.dev.mgpt.mn")
+      expect(current.seen[0].headers.get("Cf-Access-Jwt-Assertion")).toBeNull()
+    }
+  })
+  test("a PTY ticket marker cannot bypass owner or origin checks", async () => {
+    const assertion = await token()
+    for (const headers of [
+      new Headers({ Origin: origin }),
+      new Headers({ "Cf-Access-Jwt-Assertion": await token({ email: "other@example.com" }), Origin: origin }),
+      new Headers({ "Cf-Access-Jwt-Assertion": assertion, Origin: "https://evil.example" }),
+      new Headers({ "Cf-Access-Jwt-Assertion": assertion }),
+    ]) {
+      const current = environment()
+      headers.set("x-mongolgpt-ticket", "1")
+      const response = await previewRequest(
+        new Request(origin + "/pty/fixture/connect-token", {
+          method: "POST",
+          headers,
+        }),
+        current.env,
+        resolver,
+      )
+      expect(response.status).toBe(403)
+      expect(current.seen).toHaveLength(0)
+      expect(current.assets).toHaveLength(0)
+    }
+  })
   test("same-origin reads without Origin work, cross-origin reads and writes do not", async () => {
     const current = environment()
     const assertion = await token()
