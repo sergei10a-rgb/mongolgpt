@@ -2229,7 +2229,7 @@ export default function LegacyLayout(props: ParentProps) {
               </div>
               <div data-component="getting-started-actions">
                 <Button size="large" icon="plus-small" onClick={connectMongolGPTProvider}>
-                  {language.t("command.provider.connect")}
+                  {language.t("common.connect")}
                 </Button>
                 <Button size="large" variant="ghost" onClick={() => setStore("gettingStartedDismissed", true)}>
                   {language.t("toast.update.action.notYet")}

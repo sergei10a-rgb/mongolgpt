@@ -36,7 +36,6 @@ const allowedMongolianIdenticalKeys = new Set<keyof typeof en>([
   "provider.custom.models.id.placeholder",
   "provider.custom.headers.key.placeholder",
   "provider.custom.headers.value.placeholder",
-  "onboarding.providers.freeAuto.title",
   "model.provider.anthropic",
   "model.provider.openai",
   "model.provider.google",
@@ -119,6 +118,17 @@ const allowedMongolianIdenticalKeys = new Set<keyof typeof en>([
 const placeholders = (value: string) => value.match(/{{[^}]+}}/g)?.sort() ?? []
 
 describe("i18n parity", () => {
+  test("account and onboarding copy does not promise a synthetic Free Auto model", () => {
+    for (const locale of [en, mn]) {
+      expect(Object.values(locale).join("\n")).not.toMatch(/free\s+auto/i)
+    }
+    expect(en["onboarding.providers.freeAuto.title"]).toBe("MongolGPT free models")
+    expect(mn["onboarding.providers.freeAuto.title"]).toBe("MongolGPT үнэгүй загварууд")
+    expect(en["onboarding.providers.continue"]).toBe("Continue")
+    expect(mn["onboarding.providers.continue"]).toBe("Үргэлжлүүлэх")
+    expect(en["settings.account.quota.modelScoped"]).toBe("Usage limits are counted per model.")
+  })
+
   test("Mongolian covers the complete English catalog", () => {
     expect(Object.keys(mn).sort()).toEqual(Object.keys(en).sort())
   })
