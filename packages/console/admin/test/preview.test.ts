@@ -138,6 +138,31 @@ describe("owner preview boundary", () => {
       expect(current.seen[0].headers.get("Cf-Access-Jwt-Assertion")).toBeNull()
     }
   })
+  test("provides the Sandbox WebSocket upgrade handshake without forwarding arbitrary Connection tokens", async () => {
+    const assertion = await token()
+    for (const upgrade of [undefined, "websocket", "WebSocket"]) {
+      const current = environment()
+      const headers = new Headers({
+        "Cf-Access-Jwt-Assertion": assertion,
+        Origin: origin,
+        Connection: "keep-alive, x-caller-controlled",
+        "Sec-WebSocket-Protocol": "fixture-protocol",
+      })
+      if (upgrade) headers.set("Upgrade", upgrade)
+      const response = await previewRequest(
+        new Request(origin + "/pty/fixture/connect?ticket=fixture-ticket", { headers }),
+        current.env,
+        resolver,
+      )
+      expect(response.status).toBe(200)
+      expect(current.seen).toHaveLength(1)
+      expect(current.seen[0].headers.get("Connection")).toBe(upgrade ? "Upgrade" : null)
+      expect(current.seen[0].headers.get("Upgrade")).toBe(upgrade ?? null)
+      expect(current.seen[0].headers.get("Sec-WebSocket-Protocol")).toBe("fixture-protocol")
+      expect(new URL(current.seen[0].url).searchParams.get("ticket")).toBe("fixture-ticket")
+      expect(current.seen[0].headers.get("Cf-Access-Jwt-Assertion")).toBeNull()
+    }
+  })
   test("a PTY ticket marker cannot bypass owner or origin checks", async () => {
     const assertion = await token()
     for (const headers of [

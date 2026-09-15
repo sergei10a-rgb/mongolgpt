@@ -77,6 +77,8 @@ export async function previewRequest(request: Request, env: PreviewEnvironment, 
     const value = request.headers.get(name)
     if (value) headers.set(name, value)
   }
+  // Sandbox dispatch requires both upgrade headers; never forward arbitrary hop-by-hop tokens.
+  if (headers.get("Upgrade")?.toLowerCase() === "websocket") headers.set("Connection", "Upgrade")
   const cookies = request.headers
     .get("Cookie")
     ?.split(";")
