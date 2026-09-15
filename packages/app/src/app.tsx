@@ -27,7 +27,6 @@ import {
   onCleanup,
   type ParentProps,
   Show,
-  Suspense,
 } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { CommandProvider } from "@/context/command"
@@ -112,7 +111,6 @@ const SessionRoute = () => {
 const TargetSessionRoute = () => {
   const params = useParams<{ serverKey: string; id: string }>()
   const global = useGlobal()
-  const language = useLanguage()
   const conn = createMemo(() => {
     const key = requireServerKey(params.serverKey)
     return global.servers.list().find((item) => ServerConnection.key(item) === key)
@@ -122,16 +120,7 @@ const TargetSessionRoute = () => {
     <Show when={requireServerKey(params.serverKey)} keyed>
       <ServerSDKProvider server={conn}>
         <ServerSyncProvider server={conn}>
-          <Suspense
-            fallback={
-              <div role="status" class="flex h-full min-h-40 w-full flex-col items-center justify-center gap-4 p-6">
-                <Splash class="h-12 w-12" aria-hidden="true" />
-                <span class="text-14-regular text-text-base">{language.t("common.loading")}</span>
-              </div>
-            }
-          >
-            <ResolvedTargetSessionRoute />
-          </Suspense>
+          <ResolvedTargetSessionRoute />
         </ServerSyncProvider>
       </ServerSDKProvider>
     </Show>
@@ -142,6 +131,7 @@ function ResolvedTargetSessionRoute() {
   const params = useParams<{ serverKey: string; id: string }>()
   const navigate = useNavigate()
   const settings = useSettings()
+  const language = useLanguage()
   const tabs = useTabs()
   const sync = useServerSync()
   const serverKey = createMemo(() => requireServerKey(params.serverKey))
@@ -161,7 +151,10 @@ function ResolvedTargetSessionRoute() {
         return undefined
       }),
   )
-  const current = createMemo(() => selectSessionLineage(params.id, cached(), resolved()))
+  // Handle lineage loading here without changing the session history's Suspense boundary.
+  const current = createMemo(() =>
+    selectSessionLineage(params.id, cached(), resolved.state === "ready" ? resolved() : undefined),
+  )
   const directory = createMemo(() => current()?.session.directory)
   const targetDirectory = () => directory()!
 
@@ -177,7 +170,15 @@ function ResolvedTargetSessionRoute() {
   return (
     <TargetServerScopedProviders directory={directory} sessionID={() => params.id}>
       <Show when={!!current() || resolved.state !== "errored"} fallback={<ErrorPage error={resolved.error} />}>
-        <Show when={directory()}>
+        <Show
+          when={directory()}
+          fallback={
+            <div role="status" class="flex h-full min-h-40 w-full flex-col items-center justify-center gap-4 p-6">
+              <Splash class="h-12 w-12" aria-hidden="true" />
+              <span class="text-14-regular text-text-base">{language.t("common.loading")}</span>
+            </div>
+          }
+        >
           <Show
             when={settings.general.newLayoutDesigns()}
             fallback={<Navigate href={legacySessionHref(directory()!, params.id)} />}

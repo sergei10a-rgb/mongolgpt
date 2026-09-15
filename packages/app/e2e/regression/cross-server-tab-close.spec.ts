@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test"
 import { base64Encode } from "@mongolgpt/core/util/encode"
+import { fixture } from "../smoke/session-timeline.fixture"
 
 const serverA = "http://127.0.0.1:4096"
 const serverB = "http://127.0.0.1:4097"
@@ -21,6 +22,16 @@ for (const width of [1440, 390]) {
         await pending
         return json(route, status === 200 ? sessionA : { message: "Session service unavailable" }, status)
       })
+      const items = structuredClone(fixture.messages[fixture.sourceID].slice(0, 2))
+      for (const item of items) {
+        item.info.sessionID = sessionA.id
+        for (const part of item.parts) part.sessionID = sessionA.id
+      }
+      items[0].parts[0].text = "Хадгалсан зурвас"
+      const message = "Хэрэглээний хязгаарт хүрлээ."
+      items[1].info.error = { name: "APIError", data: { message, statusCode: 429, isRetryable: false } }
+      items[1].parts = []
+      await page.route(`${serverA}/session/${sessionA.id}/message*`, (route) => json(route, items))
       await page.addInitScript(
         ({ serverA }) => {
           localStorage.setItem("settings.v3", JSON.stringify({ general: { newLayoutDesigns: true } }))
@@ -45,6 +56,10 @@ for (const width of [1440, 390]) {
       await expect(
         page.getByRole("heading", { name: status === 200 ? sessionA.title : "Ямар нэг алдаа гарлаа", exact: true }),
       ).toBeVisible()
+      if (status === 200) {
+        await expect(page.getByText("Хадгалсан зурвас", { exact: true })).toBeVisible()
+        await expect(page.locator(".error-card").filter({ hasText: message })).toBeVisible()
+      }
       expect(new URL(page.url()).pathname).toBe(href)
       expect(errors).toEqual([])
     })
