@@ -1535,6 +1535,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   {fileAttachmentInput()}
                   <TooltipV2
                     placement="top"
+                    class="shrink-0"
                     value={
                       <>
                         {language.t("prompt.action.attachFile")}
@@ -1603,7 +1604,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     </div>
                   </Show>
                 </div>
-                <TooltipV2 placement="top" inactive={!working() && blank()} value={tip()}>
+                <TooltipV2 placement="top" class="shrink-0" inactive={!working() && blank()} value={tip()}>
                   <IconButton
                     data-action="prompt-submit"
                     type="submit"
@@ -1611,7 +1612,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     tabIndex={store.mode === "normal" ? undefined : -1}
                     icon={stopping() ? "stop" : store.mode === "shell" ? "arrow-undo-down" : "arrow-up"}
                     variant="primary"
-                    class="size-7 rounded-md p-[6px] text-v2-icon-icon-muted shadow-[var(--v2-elevation-button-contrast)] disabled:opacity-50"
+                    class="size-7 shrink-0 rounded-md p-[6px] text-v2-icon-icon-muted shadow-[var(--v2-elevation-button-contrast)] disabled:opacity-50"
                     style={{
                       "background-image":
                         "linear-gradient(180deg,var(--v2-alpha-light-20) 0%,var(--v2-alpha-light-0) 100%),linear-gradient(90deg,var(--v2-background-bg-contrast) 0%,var(--v2-background-bg-contrast) 100%)",
@@ -2035,6 +2036,7 @@ function ComposerModelControl(props: { state: ComposerModelControlState }) {
           <TooltipV2
             placement="top"
             gutter={4}
+            class="min-w-0"
             value={
               <>
                 {props.state.title}
@@ -2061,7 +2063,9 @@ function ComposerModelControl(props: { state: ComposerModelControlState }) {
                   />
                 )}
               </Show>
-              <span class="truncate">{props.state.modelName}</span>
+              <span class="truncate" title={props.state.modelName}>
+                {props.state.modelName}
+              </span>
               <span class="-ml-1 shrink-0 flex size-fit">
                 <Icon name="chevron-down" size="small" class="text-v2-icon-icon-muted" />
               </span>
@@ -2072,6 +2076,7 @@ function ComposerModelControl(props: { state: ComposerModelControlState }) {
         <TooltipV2
           placement="top"
           gutter={4}
+          class="min-w-0"
           value={
             <>
               {props.state.title}
@@ -2102,7 +2107,9 @@ function ComposerModelControl(props: { state: ComposerModelControlState }) {
                 />
               )}
             </Show>
-            <span class="truncate">{props.state.modelName}</span>
+            <span class="truncate" title={props.state.modelName}>
+              {props.state.modelName}
+            </span>
             <span class="-ml-1 shrink-0 flex size-fit">
               <Icon name="chevron-down" size="small" class="text-v2-icon-icon-muted" />
             </span>
