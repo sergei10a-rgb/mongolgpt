@@ -9,6 +9,47 @@ const sessionA = session("ses_server_a", "C:/server-a", "Server A session")
 const sessionB = session("ses_server_b", "/home/server-b", "Server B session")
 
 for (const width of [1440, 390]) {
+  for (const status of [200, 503]) {
+    test(`a delayed ${status} session shows loading then resolves at ${width}px`, async ({ page }, info) => {
+      await page.setViewportSize({ width, height: 900 })
+      await mockServers(page, [])
+      let release!: () => void
+      const pending = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      await page.route(`${serverA}/session/${sessionA.id}`, async (route) => {
+        await pending
+        return json(route, status === 200 ? sessionA : { message: "Session service unavailable" }, status)
+      })
+      await page.addInitScript(
+        ({ serverA }) => {
+          localStorage.setItem("settings.v3", JSON.stringify({ general: { newLayoutDesigns: true } }))
+          localStorage.setItem("mongolgpt.global.dat:server", JSON.stringify({ list: [serverA] }))
+        },
+        { serverA },
+      )
+      const errors: string[] = []
+      page.on("pageerror", (error) => errors.push(error.message))
+      const href = `/server/${base64Encode(serverA)}/session/${sessionA.id}`
+      await page.goto(href)
+      const loading = page.getByRole("status").filter({ hasText: "Ачаалж байна" })
+      try {
+        await expect(loading).toBeVisible()
+        await expect(page.getByRole("textbox", { name: "Юу ч асуу..." })).toHaveCount(0)
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+        await page.screenshot({ path: info.outputPath("session-route-loading.png"), fullPage: false })
+      } finally {
+        release()
+      }
+      await expect(loading).toHaveCount(0)
+      await expect(
+        page.getByRole("heading", { name: status === 200 ? sessionA.title : "Ямар нэг алдаа гарлаа", exact: true }),
+      ).toBeVisible()
+      expect(new URL(page.url()).pathname).toBe(href)
+      expect(errors).toEqual([])
+    })
+  }
+
   for (const format of ["legacy", "typed"] as const) {
     test(`missing ${format} session opens the remaining tab at ${width}px`, async ({ page }, info) => {
       await page.setViewportSize({ width, height: 900 })
